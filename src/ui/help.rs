@@ -2,123 +2,162 @@ use ratatui::{
     layout::Rect,
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Clear, Paragraph, Wrap},
+    widgets::{Block, Borders, Clear, Paragraph},
     Frame,
 };
 
 use crate::theme;
 
+const KEY_COL: usize = 12;
+const POPUP_BG: Color = Color::Rgb(16, 18, 28);
+
 pub fn render_help(frame: &mut Frame, area: Rect) {
-    let popup = centered_rect(70, 70, area);
+    frame.render_widget(
+        Block::default().style(Style::default().bg(Color::Rgb(8, 9, 14))),
+        area,
+    );
+
+    let popup = centered_rect(54, 44, area);
     frame.render_widget(Clear, popup);
 
     let block = Block::default()
         .title(Span::styled(
-            " Help ",
+            " toppy — keyboard shortcuts ",
             Style::default()
                 .fg(theme::STATUS_KEY_HELP)
                 .add_modifier(Modifier::BOLD),
         ))
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(theme::STATUS_KEY_HELP));
+        .border_style(Style::default().fg(theme::STATUS_KEY_HELP))
+        .style(Style::default().bg(POPUP_BG));
 
-    let key = |color: Color| Style::default().fg(color).add_modifier(Modifier::BOLD);
-    let desc = theme::status_action_style();
-    let section = |title: &'static str, color: Color| {
-        Line::from(Span::styled(
-            title,
-            Style::default().fg(color).add_modifier(Modifier::BOLD),
-        ))
-    };
+    let desc = theme::status_label_style();
+    let mut lines = Vec::new();
 
-    let text = vec![
-        Line::from(""),
-        section("Navigation", theme::STATUS_KEY_NAV),
-        binding(
-            vec!["↑", "↓", "PgUp", "PgDn", "Home", "End"],
-            "move selection",
-            theme::STATUS_KEY_NAV,
-        ),
-        binding(vec!["t"], "toggle tree view", theme::STATUS_KEY_TREE),
-        Line::from(""),
-        section("Sorting", theme::STATUS_KEY_SORT),
-        binding(vec!["P"], "sort by PID", theme::STATUS_KEY_SORT),
-        binding(vec!["C"], "sort by CPU", theme::STATUS_KEY_SORT),
-        binding(vec!["M"], "sort by MEM", theme::STATUS_KEY_SORT),
-        binding(vec!["T"], "sort by Command", theme::STATUS_KEY_SORT),
-        Line::from(""),
-        section("Filter & actions", theme::STATUS_KEY_FILTER),
-        binding(vec!["/"], "filter processes (Esc to clear)", theme::STATUS_KEY_FILTER),
-        binding(vec!["k"], "kill menu (TERM / KILL)", theme::STATUS_KEY_KILL),
-        binding(vec!["→", "←", "Enter"], "expand/collapse tree node", theme::STATUS_KEY_TREE),
-        binding(vec!["r"], "force refresh", theme::STATUS_KEY_NAV),
-        binding(vec!["+", "-"], "slower / faster refresh", theme::STATUS_KEY_NAV),
-        Line::from(""),
-        section("General", theme::STATUS_KEY_HELP),
-        binding(vec!["?"], "toggle this help", theme::STATUS_KEY_HELP),
-        binding(vec!["q"], "quit", theme::STATUS_KEY_QUIT),
-        Line::from(""),
-        Line::from(vec![
-            Span::styled("Press ", desc),
-            Span::styled("?", key(theme::STATUS_KEY_HELP)),
-            Span::styled(" or ", desc),
-            Span::styled("Esc", key(theme::STATUS_KEY_NAV)),
-            Span::styled(" to close", desc),
-        ]),
-    ];
+    lines.extend(section("Navigation", theme::STATUS_KEY_NAV));
+    lines.push(row("↑ ↓", "move selection", theme::STATUS_KEY_NAV));
+    lines.push(row("PgUp/Dn", "page up / down", theme::STATUS_KEY_NAV));
+    lines.push(row("Home/End", "first / last item", theme::STATUS_KEY_NAV));
+    lines.push(row("t", "toggle tree view", theme::STATUS_KEY_TREE));
+    lines.push(row("→ ← Ret", "expand / collapse tree", theme::STATUS_KEY_TREE));
 
-    let paragraph = Paragraph::new(text)
-        .block(block)
-        .wrap(Wrap { trim: true });
+    lines.extend(section("Sorting", theme::STATUS_KEY_SORT));
+    lines.push(row("P", "sort by PID", theme::STATUS_KEY_SORT));
+    lines.push(row("C", "sort by CPU", theme::STATUS_KEY_SORT));
+    lines.push(row("M", "sort by MEM", theme::STATUS_KEY_SORT));
+    lines.push(row("T", "sort by command", theme::STATUS_KEY_SORT));
 
-    frame.render_widget(paragraph, popup);
+    lines.extend(section("Actions", theme::STATUS_KEY_FILTER));
+    lines.push(row("/", "filter processes", theme::STATUS_KEY_FILTER));
+    lines.push(row("k", "kill selected process", theme::STATUS_KEY_KILL));
+    lines.push(row("r", "force refresh", theme::STATUS_KEY_NAV));
+    lines.push(row("+  -", "slower / faster refresh", theme::STATUS_KEY_NAV));
+
+    lines.extend(section("General", theme::STATUS_KEY_HELP));
+    lines.push(row("?", "toggle this help", theme::STATUS_KEY_HELP));
+    lines.push(row("q", "quit", theme::STATUS_KEY_QUIT));
+
+    lines.push(Line::from(""));
+    lines.push(Line::from(vec![
+        Span::raw("        "),
+        Span::styled("Press ", desc),
+        Span::styled("?", key_style(theme::STATUS_KEY_HELP)),
+        Span::styled(" or ", desc),
+        Span::styled("Esc", key_style(theme::STATUS_KEY_NAV)),
+        Span::styled(" to close", desc),
+    ]));
+
+    frame.render_widget(Paragraph::new(lines).block(block), popup);
 }
 
-fn binding(keys: Vec<&'static str>, action: &'static str, key_color: Color) -> Line<'static> {
-    let key_style = Style::default().fg(key_color).add_modifier(Modifier::BOLD);
-    let desc_style = theme::status_action_style();
+fn key_style(color: Color) -> Style {
+    Style::default().fg(color).add_modifier(Modifier::BOLD)
+}
 
-    let mut spans = vec![Span::raw("  ")];
-    for (idx, key) in keys.iter().enumerate() {
-        if idx > 0 {
-            spans.push(Span::styled("/", desc_style));
-        }
-        spans.push(Span::styled(*key, key_style));
-    }
-    spans.push(Span::styled(format!("  {action}"), desc_style));
-    Line::from(spans)
+fn section(title: &'static str, color: Color) -> Vec<Line<'static>> {
+    vec![
+        Line::from(""),
+        Line::from(vec![
+            Span::raw("  "),
+            Span::styled("── ", Style::default().fg(theme::BAR_SEP)),
+            Span::styled(title, Style::default().fg(color).add_modifier(Modifier::BOLD)),
+            Span::styled(" ", Style::default().fg(theme::BAR_SEP)),
+            Span::styled(
+                "─".repeat(28),
+                Style::default().fg(theme::BAR_SEP),
+            ),
+        ]),
+    ]
+}
+
+fn row(keys: &'static str, description: &'static str, key_color: Color) -> Line<'static> {
+    let pad = KEY_COL.saturating_sub(keys.len());
+    Line::from(vec![
+        Span::raw("  "),
+        Span::styled(keys, key_style(key_color)),
+        Span::raw(" ".repeat(pad)),
+        Span::styled("│ ", Style::default().fg(theme::BAR_SEP)),
+        Span::styled(description, theme::status_label_style()),
+    ])
 }
 
 pub fn render_kill_menu(frame: &mut Frame, area: Rect, pid: u32) {
-    let popup = centered_rect(50, 30, area);
+    frame.render_widget(
+        Block::default().style(Style::default().bg(Color::Rgb(8, 9, 14))),
+        area,
+    );
+
+    let popup = centered_rect(44, 28, area);
     frame.render_widget(Clear, popup);
 
     let block = Block::default()
         .title(format!(" Kill PID {pid} "))
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(theme::utilization_color(80.0)));
+        .border_style(Style::default().fg(theme::STATUS_KEY_KILL))
+        .style(Style::default().bg(POPUP_BG));
 
     let text = vec![
         Line::from(""),
-        Line::from("  1  Send SIGTERM (graceful)"),
-        Line::from("  2  Send SIGKILL (force)"),
+        row("1", "send SIGTERM (graceful)", theme::STATUS_KEY_KILL),
+        row("2", "send SIGKILL (force)", theme::STATUS_KEY_KILL),
         Line::from(""),
-        Line::from(Span::styled("  Esc  cancel", theme::dim_style())),
+        Line::from(vec![
+            Span::raw("  "),
+            Span::styled("Esc", key_style(theme::STATUS_KEY_NAV)),
+            Span::styled("  cancel", theme::status_label_style()),
+        ]),
     ];
 
     frame.render_widget(Paragraph::new(text).block(block), popup);
 }
 
 pub fn render_filter_input(frame: &mut Frame, area: Rect, filter: &str) {
-    let popup = centered_rect(60, 20, area);
+    frame.render_widget(
+        Block::default().style(Style::default().bg(Color::Rgb(8, 9, 14))),
+        area,
+    );
+
+    let popup = centered_rect(50, 22, area);
     frame.render_widget(Clear, popup);
 
     let block = Block::default()
-        .title(" Filter ")
+        .title(Span::styled(
+            " Filter ",
+            Style::default()
+                .fg(theme::STATUS_KEY_FILTER)
+                .add_modifier(Modifier::BOLD),
+        ))
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(theme::CPU_BORDER));
+        .border_style(Style::default().fg(theme::STATUS_KEY_FILTER))
+        .style(Style::default().bg(POPUP_BG));
 
-    let text = format!("/{filter}▌");
+    let text = Line::from(vec![
+        Span::raw("  "),
+        Span::styled("/", key_style(theme::STATUS_KEY_FILTER)),
+        Span::styled(filter, theme::status_message_style()),
+        Span::styled("▌", key_style(theme::STATUS_KEY_FILTER)),
+    ]);
+
     frame.render_widget(Paragraph::new(text).block(block), popup);
 }
 
