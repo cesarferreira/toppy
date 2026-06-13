@@ -31,14 +31,14 @@
 
 ## Why toppy
 
-`htop` and `btop` are great — but sometimes you want something lighter, sharper on the columns that matter, and easy to hack on in Rust.
+Most system monitors try to show everything at once. **toppy** stays focused: which process is using CPU or memory, and how loaded the machine is right now.
 
-**toppy** is a single binary TUI that puts **PID**, **CPU%**, and **Command** front and center, with colorful per-core CPU bars and memory/swap usage at a glance.
+It is a single binary TUI that puts **PID**, **CPU%**, and **Command** front and center, with colorful per-core CPU bars and memory/swap usage at a glance. The release binary is about **1.1 MB** with roughly **11 MB** idle RSS on macOS arm64 — fast to install, cheap to leave running (see [Footprint](#footprint)).
 
 - **Process-first.** Wide command column, sortable PID/CPU/MEM, live filter, tree view.
 - **Colorful at a glance.** Green → yellow → red utilization bars for CPU, RAM, and swap.
 - **Keyboard-driven.** Sort, filter, kill, tree expand/collapse, help overlay — all from the keyboard.
-- **Small and fast.** Rust + [ratatui](https://ratatui.rs) + [sysinfo](https://github.com/GuillaumeGomez/sysinfo). No config files, no mouse required.
+- **Lean and responsive.** Rust + [ratatui](https://ratatui.rs) + [sysinfo](https://github.com/GuillaumeGomez/sysinfo). No config files, no mouse required.
 - **Cross-platform.** macOS and Linux.
 
 <a id="footprint"></a>
