@@ -65,7 +65,7 @@ Prereqs:
 Then:
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/cesarferreira/toppy.git
 cd toppy
 cargo install --path . --locked
 # or
