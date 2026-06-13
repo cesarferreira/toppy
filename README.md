@@ -14,6 +14,8 @@
     &nbsp;·&nbsp;
     <a href="#quickstart">Quickstart</a>
     &nbsp;·&nbsp;
+    <a href="#footprint">Footprint</a>
+    &nbsp;·&nbsp;
     <a href="#keybindings">Keybindings</a>
     &nbsp;·&nbsp;
     <a href="#development">Development</a>
@@ -33,6 +35,28 @@
 - **htop-native controls.** Sort, filter, kill, tree expand/collapse, help overlay — all from the keyboard.
 - **Small and fast.** Rust + [ratatui](https://ratatui.rs) + [sysinfo](https://github.com/GuillaumeGomez/sysinfo). No config files, no mouse required.
 - **Cross-platform.** macOS and Linux.
+
+<a id="footprint"></a>
+## Footprint
+
+Measured on **macOS arm64** from a release build (`cargo build --release`):
+
+| | |
+|---|---|
+| **Release binary** | **~1.1 MB** (1,122,192 bytes) |
+| **Debug binary** | ~6.0 MB (dev builds only) |
+| **Idle RSS** | **~11 MB** (typical while running; ~670 processes on the test machine) |
+
+RSS includes the process list held by `sysinfo`, so it grows slightly on machines with more processes. Virtual size on macOS is much larger and is not a useful “real memory” figure.
+
+To reproduce:
+
+```bash
+cargo build --release
+ls -lh target/release/toppy
+# run toppy, then in another terminal:
+ps -o rss,command -p $(pgrep -n toppy)
+```
 
 ## Install
 

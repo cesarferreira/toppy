@@ -37,6 +37,7 @@ pub fn render_status(frame: &mut Frame, area: Rect, app: &App) {
 fn shortcut_spans() -> Vec<Span<'static>> {
     let mut spans = Vec::new();
     shortcut(&mut spans, "?", "", "", "help", theme::STATUS_KEY_HELP);
+    shortcut(&mut spans, "c", "", "", "cores", theme::CPU_BORDER);
     shortcut(&mut spans, "+", "-", "", "refresh", theme::STATUS_KEY_NAV);
     shortcut(&mut spans, "P", "C", "M", "sort", theme::STATUS_KEY_SORT);
     shortcut(&mut spans, "/", "", "", "filter", theme::STATUS_KEY_FILTER);

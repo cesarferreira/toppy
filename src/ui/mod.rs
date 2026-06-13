@@ -13,10 +13,16 @@ use ratatui::Frame;
 use crate::app::{App, ViewMode};
 
 pub fn render(frame: &mut Frame, app: &mut App) {
-    let root = layout::split_root(frame, app.cpu.per_core.len());
+    let root = layout::split_root(frame, app.cpu.per_core.len(), app.cpu_cores_expanded);
     app.visible_rows = root.main.height.saturating_sub(2);
 
-    cpu::render_cpu(frame, root.cpu, &app.cpu, app.warmed_up);
+    cpu::render_cpu(
+        frame,
+        root.cpu,
+        &app.cpu,
+        app.warmed_up,
+        app.cpu_cores_expanded,
+    );
     memory::render_memory(frame, root.memory, &app.memory);
 
     match app.mode {

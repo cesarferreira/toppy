@@ -56,7 +56,7 @@ pub fn meter_label_style() -> Style {
 }
 
 pub fn meter_total_style() -> Style {
-    Style::default().fg(BAR_TOTAL)
+    Style::default().fg(BAR_TOTAL).add_modifier(Modifier::BOLD)
 }
 
 pub fn meter_sep_style() -> Style {

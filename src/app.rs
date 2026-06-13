@@ -35,6 +35,7 @@ pub struct App {
     pub mode: ViewMode,
     pub refresh_ms: u64,
     pub visible_rows: u16,
+    pub cpu_cores_expanded: bool,
     pub status_message: Option<String>,
     pub should_quit: bool,
     collector: Collector,
@@ -62,6 +63,7 @@ impl App {
             mode: ViewMode::Table,
             refresh_ms,
             visible_rows: 10,
+            cpu_cores_expanded: false,
             status_message: None,
             should_quit: false,
             collector,
@@ -254,6 +256,15 @@ impl App {
             self.selected = 0;
             self.scroll_offset = 0;
         }
+    }
+
+    pub fn toggle_cpu_cores(&mut self) {
+        self.cpu_cores_expanded = !self.cpu_cores_expanded;
+        self.status_message = Some(if self.cpu_cores_expanded {
+            "CPU per-core view".into()
+        } else {
+            "CPU average view".into()
+        });
     }
 
     pub fn open_kill_menu(&mut self) {
