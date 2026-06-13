@@ -213,6 +213,16 @@ make clean
 make demo         # install + show --help
 ```
 
+Releasing (requires [cargo-release](https://github.com/crate-ci/cargo-release)):
+
+```bash
+make release                  # default minor bump
+make release LEVEL=patch      # patch bump
+make release LEVEL=major      # major bump
+```
+
+The pre-release hook finalizes `CHANGELOG.md` from commits since the latest `v*` tag, refreshes compare links, and leaves a fresh `Unreleased` header. If there are no commits since the last tag, the release stops before publishing.
+
 ## Stack
 
 | Component | Crate |
