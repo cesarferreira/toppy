@@ -1,7 +1,7 @@
 <div align="center">
   <h1>toppy</h1>
 
-  <p><strong>A colorful htop/btop-style system monitor — fast, focused, and built for the terminal.</strong></p>
+  <p><strong>A fast, colorful terminal system monitor — process-focused, keyboard-driven, built in Rust.</strong></p>
 
   <p>
     <img alt="License" src="https://img.shields.io/badge/license-MIT-green">
@@ -37,7 +37,7 @@
 
 - **Process-first.** Wide command column, sortable PID/CPU/MEM, live filter, tree view.
 - **Colorful at a glance.** Green → yellow → red utilization bars for CPU, RAM, and swap.
-- **htop-native controls.** Sort, filter, kill, tree expand/collapse, help overlay — all from the keyboard.
+- **Keyboard-driven.** Sort, filter, kill, tree expand/collapse, help overlay — all from the keyboard.
 - **Small and fast.** Rust + [ratatui](https://ratatui.rs) + [sysinfo](https://github.com/GuillaumeGomez/sysinfo). No config files, no mouse required.
 - **Cross-platform.** macOS and Linux.
 
@@ -112,7 +112,7 @@ Launch the monitor:
 toppy
 ```
 
-Custom refresh interval (default `1500` ms, matching htop):
+Custom refresh interval (default `1500` ms):
 
 ```bash
 toppy --refresh-rate 2000

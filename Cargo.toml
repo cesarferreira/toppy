@@ -3,8 +3,9 @@ name = "toppy"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.85"
-description = "A colorful htop/btop-style system monitor TUI"
+description = "Fast, colorful terminal system monitor for CPU, memory, and processes"
 license = "MIT"
+repository = "https://github.com/cesarferreira/toppy"
 
 [[bin]]
 name = "toppy"

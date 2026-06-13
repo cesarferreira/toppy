@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.0] - 2026-06-13
 
 ### Added
-- Initial release: colorful htop-style system monitor TUI (CPU, memory, swap, process table)
+- Initial release: colorful terminal system monitor (CPU, memory, swap, process table)
 - Process sorting, filtering, kill menu, tree view, and help overlay
 - Makefile for build, install, test, and lint workflows
 
