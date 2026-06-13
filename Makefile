@@ -1,4 +1,6 @@
-.PHONY: all build build-release install install-release clean test check fmt lint run demo
+.PHONY: all build build-release install install-release clean test check fmt lint run demo release
+
+LEVEL ?= minor
 
 # Default target
 all: check build test
@@ -49,3 +51,7 @@ run:
 demo: install
 	@echo "=== toppy demo ==="
 	toppy --help
+
+# Bump version, finalize CHANGELOG.md, tag, publish, and push (requires cargo-release)
+release:
+	cargo release $(LEVEL) --execute --no-confirm
