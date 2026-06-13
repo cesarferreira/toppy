@@ -19,13 +19,10 @@ pub struct BarSegment {
     pub color: Color,
 }
 
-pub enum MeterSuffix {
-    Plain(String),
-    BytePair {
-        used: String,
-        total: String,
-        accent: Color,
-    },
+pub struct BytePairSuffix {
+    pub used: String,
+    pub total: String,
+    pub accent: Color,
 }
 
 pub struct MeterBar {
@@ -34,7 +31,7 @@ pub struct MeterBar {
     pub pct: f32,
     pub segments: Vec<BarSegment>,
     pub pct_inside: bool,
-    pub suffix: Option<MeterSuffix>,
+    pub suffix: Option<BytePairSuffix>,
     /// Fixed width for the suffix column so sibling bars align.
     pub suffix_slot_width: usize,
 }
@@ -66,17 +63,6 @@ impl MeterBar {
         self
     }
 
-    pub fn with_suffix_slot_width(mut self, width: usize) -> Self {
-        self.suffix_slot_width = width;
-        self
-    }
-
-    pub fn with_plain_suffix(mut self, suffix: impl Into<String>, slot_width: usize) -> Self {
-        self.suffix = Some(MeterSuffix::Plain(suffix.into()));
-        self.suffix_slot_width = slot_width;
-        self
-    }
-
     pub fn with_byte_pair_suffix(
         mut self,
         used: impl Into<String>,
@@ -84,7 +70,7 @@ impl MeterBar {
         accent: Color,
         slot_width: usize,
     ) -> Self {
-        self.suffix = Some(MeterSuffix::BytePair {
+        self.suffix = Some(BytePairSuffix {
             used: used.into(),
             total: total.into(),
             accent,
@@ -156,43 +142,27 @@ impl Widget for MeterBar {
     }
 }
 
-fn render_suffix_slot(suffix: Option<MeterSuffix>, slot_width: usize) -> Vec<Span<'static>> {
+fn render_suffix_slot(suffix: Option<BytePairSuffix>, slot_width: usize) -> Vec<Span<'static>> {
     if slot_width == 0 {
         return Vec::new();
     }
 
-    let Some(suffix) = suffix else {
+    let Some(BytePairSuffix { used, total, accent }) = suffix else {
         return vec![Span::raw(" ".repeat(slot_width))];
     };
 
-    match suffix {
-        MeterSuffix::Plain(text) => {
-            let body = format!(" {text}");
-            let padded = pad_suffix_body(body, slot_width);
-            vec![Span::styled(padded, theme::meter_value_style())]
-        }
-        MeterSuffix::BytePair { used, total, accent } => {
-            let inner_width = slot_width.saturating_sub(3);
-            let body_len = used.len() + 1 + total.len();
-            let pad = inner_width.saturating_sub(body_len);
-            vec![
-                Span::raw(" "),
-                Span::styled("[", Style::default().fg(theme::BAR_BRACKET)),
-                Span::raw(" ".repeat(pad)),
-                Span::styled(used, Style::default().fg(accent).add_modifier(Modifier::BOLD)),
-                Span::styled("/", theme::meter_sep_style()),
-                Span::styled(total, theme::meter_total_style()),
-                Span::styled("]", Style::default().fg(theme::BAR_BRACKET)),
-            ]
-        }
-    }
-}
-
-fn pad_suffix_body(mut body: String, slot_width: usize) -> String {
-    if body.len() < slot_width {
-        body.push_str(&" ".repeat(slot_width - body.len()));
-    }
-    body
+    let inner_width = slot_width.saturating_sub(3);
+    let body_len = used.len() + 1 + total.len();
+    let pad = inner_width.saturating_sub(body_len);
+    vec![
+        Span::raw(" "),
+        Span::styled("[", Style::default().fg(theme::BAR_BRACKET)),
+        Span::raw(" ".repeat(pad)),
+        Span::styled(used, Style::default().fg(accent).add_modifier(Modifier::BOLD)),
+        Span::styled("/", theme::meter_sep_style()),
+        Span::styled(total, theme::meter_total_style()),
+        Span::styled("]", Style::default().fg(theme::BAR_BRACKET)),
+    ]
 }
 
 fn render_fill(width: usize, segments: &[BarSegment]) -> Vec<Span<'static>> {

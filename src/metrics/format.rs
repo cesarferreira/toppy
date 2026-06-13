@@ -25,10 +25,6 @@ pub fn format_bytes_compact(bytes: u64) -> String {
     }
 }
 
-pub fn format_bytes_pair_compact(used: u64, total: u64) -> String {
-    format!("{}/{}", format_bytes_compact(used), format_bytes_compact(total))
-}
-
 pub fn percent(used: u64, total: u64) -> f32 {
     if total == 0 {
         0.0

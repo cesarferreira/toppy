@@ -22,7 +22,6 @@ pub const STATUS_MESSAGE: Color = Color::Rgb(255, 220, 120);
 pub const BAR_BRACKET: Color = Color::Rgb(90, 96, 120);
 pub const BAR_TRACK: Color = Color::Rgb(48, 52, 68);
 pub const BAR_LABEL: Color = Color::Rgb(170, 210, 255);
-pub const BAR_VALUE: Color = Color::Rgb(210, 220, 245);
 pub const BAR_TOTAL: Color = Color::Rgb(130, 145, 175);
 pub const BAR_SEP: Color = Color::Rgb(90, 100, 125);
 pub const BAR_CACHE: Color = Color::Rgb(120, 190, 255);
@@ -54,10 +53,6 @@ pub fn dim_style() -> Style {
 
 pub fn meter_label_style() -> Style {
     Style::default().fg(BAR_LABEL).add_modifier(Modifier::BOLD)
-}
-
-pub fn meter_value_style() -> Style {
-    Style::default().fg(BAR_VALUE)
 }
 
 pub fn meter_total_style() -> Style {
