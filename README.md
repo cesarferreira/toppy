@@ -7,6 +7,7 @@
     <img alt="License" src="https://img.shields.io/badge/license-MIT-green">
     <img alt="Rust" src="https://img.shields.io/badge/rust-1.85%2B-orange">
     <img alt="Edition" src="https://img.shields.io/badge/edition-2024-blue">
+    <a href="https://crates.io/crates/toppy"><img alt="crates.io" src="https://img.shields.io/crates/v/toppy.svg"></a>
   </p>
 
   <p>
@@ -64,33 +65,20 @@ ps -o rss,command -p $(pgrep -n toppy)
 
 ## Install
 
-The shortest path if you have Rust installed:
+Requires [Rust](https://rustup.rs) **1.85+** and `~/.cargo/bin` on your `PATH`.
 
 ```bash
-cargo install --path . --locked
-# or
-make install-release
+cargo install toppy
+```
+
+Verify:
+
+```bash
+toppy --help
 ```
 
 <details>
-<summary><strong>Other installation methods</strong> — debug install, build from source</summary>
-
-### Debug install (faster compile)
-
-```bash
-make install
-```
-
-Installs a debug `toppy` binary to `~/.cargo/bin`.
-
-### Build from source
-
-Prereqs:
-
-- Rust **1.85+** (edition 2024)
-- macOS or Linux
-
-Then:
+<summary><strong>Build from source</strong> — for development or unreleased changes</summary>
 
 ```bash
 git clone https://github.com/cesarferreira/toppy.git
@@ -100,7 +88,13 @@ cargo install --path . --locked
 make install-release
 ```
 
-### Build without installing
+Debug install (faster compile, larger binary):
+
+```bash
+make install
+```
+
+Run without installing:
 
 ```bash
 make build-release
@@ -108,12 +102,6 @@ make build-release
 ```
 
 </details>
-
-Verify the install:
-
-```bash
-toppy --help
-```
 
 <a id="quickstart"></a>
 ## Quickstart
