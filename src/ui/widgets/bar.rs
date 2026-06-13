@@ -178,10 +178,10 @@ fn render_suffix_slot(suffix: Option<MeterSuffix>, slot_width: usize) -> Vec<Spa
             vec![
                 Span::raw(" "),
                 Span::styled("[", Style::default().fg(theme::BAR_BRACKET)),
+                Span::raw(" ".repeat(pad)),
                 Span::styled(used, Style::default().fg(accent).add_modifier(Modifier::BOLD)),
                 Span::styled("/", theme::meter_sep_style()),
                 Span::styled(total, theme::meter_total_style()),
-                Span::raw(" ".repeat(pad)),
                 Span::styled("]", Style::default().fg(theme::BAR_BRACKET)),
             ]
         }
