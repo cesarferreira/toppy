@@ -4,6 +4,10 @@ use crate::app::{App, ViewMode};
 use crate::process::model::SortColumn;
 use sysinfo::Signal;
 
+pub const MIN_REFRESH_MS: u64 = 200;
+pub const MAX_REFRESH_MS: u64 = 10_000;
+pub const DEFAULT_REFRESH_MS: u64 = 1500;
+
 pub fn handle_event(app: &mut App, event: Event) -> bool {
     match event {
         Event::Key(key) => handle_key(app, key),
@@ -41,6 +45,8 @@ fn handle_key(app: &mut App, key: KeyEvent) -> bool {
         KeyCode::Char('?') | KeyCode::F(1) => app.toggle_help(),
         KeyCode::Char('t') => app.toggle_tree(),
         KeyCode::Char('r') => app.force_refresh(),
+        KeyCode::Char('+') | KeyCode::Char('=') => app.slower_refresh(),
+        KeyCode::Char('-') | KeyCode::Char('_') => app.faster_refresh(),
         KeyCode::Char('k') | KeyCode::F(9) => app.open_kill_menu(),
         KeyCode::Char('P') => app.set_sort(SortColumn::Pid),
         KeyCode::Char('C') => app.set_sort(SortColumn::Cpu),

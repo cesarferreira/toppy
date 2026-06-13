@@ -24,7 +24,7 @@ use app::App;
 #[command(name = "toppy", about = "A colorful htop/btop-style system monitor")]
 struct Cli {
     /// Refresh interval in milliseconds
-    #[arg(long, default_value_t = 250)]
+    #[arg(long, default_value_t = crate::input::DEFAULT_REFRESH_MS)]
     refresh_rate: u64,
 }
 
@@ -69,6 +69,7 @@ fn restore_terminal_inner() -> io::Result<()> {
 }
 
 fn run(terminal: &mut Terminal<CrosstermBackend<Stdout>>, refresh_ms: u64) -> Result<()> {
+    let refresh_ms = refresh_ms.clamp(input::MIN_REFRESH_MS, input::MAX_REFRESH_MS);
     let mut app = App::new(refresh_ms);
 
     loop {

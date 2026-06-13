@@ -8,7 +8,7 @@ use ratatui::{
 use crate::{app::App, theme};
 
 pub fn render_status(frame: &mut Frame, area: Rect, app: &App) {
-    let mut hint = String::from("F1/? help  P/C/M/T sort  / filter  t tree  k kill  r refresh  q quit");
+    let mut hint = String::from("F1/? help  +/- refresh  P/C/M/T sort  / filter  t tree  k kill  r refresh  q quit");
 
     if let Some(msg) = &app.status_message {
         hint = format!("{msg}  |  {hint}");

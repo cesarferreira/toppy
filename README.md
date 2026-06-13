@@ -96,11 +96,13 @@ Launch the monitor:
 toppy
 ```
 
-Custom refresh interval (default `250` ms):
+Custom refresh interval (default `1500` ms, matching htop):
 
 ```bash
-toppy --refresh-rate 500
+toppy --refresh-rate 2000
 ```
+
+Use `+` / `-` while running to adjust the interval (200 ms–10 s).
 
 From the process list:
 
@@ -164,6 +166,7 @@ Press `t` for a full-screen tree view. Expand and collapse branches with `→`, 
 | `→` / `←` / `Enter` | Expand/collapse tree node |
 | `k` / `F9` | Kill selected process |
 | `?` / `F1` | Help overlay |
+| `+` / `-` | Slower / faster refresh |
 | `r` | Force refresh |
 
 In the kill menu: `1` = SIGTERM, `2` = SIGKILL.
@@ -172,7 +175,7 @@ In the kill menu: `1` = SIGTERM, `2` = SIGKILL.
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `--refresh-rate` | `250` | Refresh interval in milliseconds |
+| `--refresh-rate` | `1500` | Refresh interval in milliseconds |
 
 <a id="development"></a>
 ## Development
