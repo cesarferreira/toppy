@@ -8,10 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+## [0.2.0] - 2026-06-13
+
 ### Changed
 - Add a terminal screenshot to the README.
 - Replace generated README screenshot with a real capture.
 - Document crates.io install as the primary README path.
+- Release scripts
+- Refine project description and add crates.io repository metadata.
+- Updated readme
 
 ## [0.1.0] - 2026-06-13
 
@@ -33,5 +38,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - README footprint notes for release binary size and idle RSS
 
 <!-- next-url -->
-[Unreleased]: https://github.com/cesarferreira/toppy/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/cesarferreira/toppy/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/cesarferreira/toppy/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/cesarferreira/toppy/releases/tag/v0.1.0
