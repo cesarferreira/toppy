@@ -82,6 +82,19 @@ impl App {
         self.status_message = Some("refreshed".to_string());
     }
 
+    pub fn slower_refresh(&mut self) {
+        self.refresh_ms = (self.refresh_ms + 500).min(crate::input::MAX_REFRESH_MS);
+        self.status_message = Some(format!("refresh {}ms", self.refresh_ms));
+    }
+
+    pub fn faster_refresh(&mut self) {
+        self.refresh_ms = self
+            .refresh_ms
+            .saturating_sub(500)
+            .max(crate::input::MIN_REFRESH_MS);
+        self.status_message = Some(format!("refresh {}ms", self.refresh_ms));
+    }
+
     fn apply_snapshot(&mut self, snapshot: MetricsSnapshot) {
         self.cpu = snapshot.cpu;
         self.memory = snapshot.memory;

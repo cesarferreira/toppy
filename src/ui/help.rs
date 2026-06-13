@@ -35,6 +35,7 @@ pub fn render_help(frame: &mut Frame, area: Rect) {
         Line::from("  F9  kill menu"),
         Line::from("  →/← or Enter  expand/collapse tree node"),
         Line::from("  r   force refresh"),
+        Line::from("  + / -  slower / faster refresh (htop-style)"),
         Line::from(""),
         Line::from(Span::styled("General", Style::default().add_modifier(Modifier::BOLD))),
         Line::from("  ? / F1  toggle this help"),
