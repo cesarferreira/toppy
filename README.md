@@ -20,6 +20,10 @@
     &nbsp;·&nbsp;
     <a href="#development">Development</a>
   </p>
+
+  <p>
+    <img src="docs/screenshot.png" alt="toppy running in a terminal" width="900">
+  </p>
 </div>
 
 ---
