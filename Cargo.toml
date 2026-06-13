@@ -1,0 +1,18 @@
+[package]
+name = "toppy"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+description = "A colorful htop/btop-style system monitor TUI"
+license = "MIT"
+
+[[bin]]
+name = "toppy"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }
+crossterm = "0.29"
+ratatui = "0.30"
+sysinfo = "0.39"
