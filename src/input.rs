@@ -44,6 +44,7 @@ fn handle_key(app: &mut App, key: KeyEvent) -> bool {
         KeyCode::Char('q') => app.should_quit = true,
         KeyCode::Char('?') => app.toggle_help(),
         KeyCode::Char('t') => app.toggle_tree(),
+        KeyCode::Char('c') => app.toggle_cpu_cores(),
         KeyCode::Char('r') => app.force_refresh(),
         KeyCode::Char('+') | KeyCode::Char('=') => app.slower_refresh(),
         KeyCode::Char('-') | KeyCode::Char('_') => app.faster_refresh(),

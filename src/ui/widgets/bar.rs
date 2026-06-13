@@ -104,12 +104,8 @@ impl Widget for MeterBar {
             return;
         }
 
-        let mut budget = area_w - overhead;
-        let pct_inside = self.pct_inside && budget > pct_text.len() + 3;
-        if pct_inside {
-            budget -= pct_text.len();
-        }
-
+        let budget = area_w - overhead;
+        let pct_inside = self.pct_inside && budget > pct_text.len() + 1;
         let inner_width = budget.max(2);
 
         let mut spans = vec![
@@ -118,21 +114,15 @@ impl Widget for MeterBar {
             Span::styled("[", Style::default().fg(theme::BAR_BRACKET)),
         ];
 
-        spans.extend(render_fill(inner_width, &self.segments));
-
         if pct_inside {
-            let fill_cells = ((self.pct / 100.0) * inner_width as f32).ceil() as usize;
-            let pad = inner_width.saturating_sub(fill_cells + pct_text.len());
-            if pad > 0 {
-                spans.push(Span::styled(
-                    " ".repeat(pad),
-                    Style::default().fg(theme::BAR_TRACK),
-                ));
-            }
+            let track_width = inner_width.saturating_sub(pct_text.len()).max(1);
+            spans.extend(render_fill(track_width, &self.segments));
             spans.push(Span::styled(
                 pct_text,
                 theme::utilization_style(self.pct),
             ));
+        } else {
+            spans.extend(render_fill(inner_width, &self.segments));
         }
 
         spans.push(Span::styled("]", Style::default().fg(theme::BAR_BRACKET)));

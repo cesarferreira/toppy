@@ -10,8 +10,12 @@ pub struct RootLayout {
     pub status: Rect,
 }
 
-pub fn split_root(frame: &Frame, core_count: usize) -> RootLayout {
-    let cpu_height = core_count.max(1).min(16) as u16 + 2;
+pub fn split_root(frame: &Frame, core_count: usize, cpu_expanded: bool) -> RootLayout {
+    let cpu_height = if cpu_expanded {
+        core_count.max(1).min(16) as u16 + 2
+    } else {
+        3
+    };
 
     let chunks = Layout::default()
         .direction(Direction::Vertical)
