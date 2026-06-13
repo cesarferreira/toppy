@@ -21,7 +21,7 @@ use ratatui::{backend::CrosstermBackend, Terminal};
 use app::App;
 
 #[derive(Parser, Debug)]
-#[command(name = "toppy", about = "A colorful htop/btop-style system monitor")]
+#[command(name = "toppy", about = "Fast, colorful terminal system monitor")]
 struct Cli {
     /// Refresh interval in milliseconds
     #[arg(long, default_value_t = crate::input::DEFAULT_REFRESH_MS)]
