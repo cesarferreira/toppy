@@ -13,8 +13,20 @@ pub fn format_bytes(bytes: u64) -> String {
     }
 }
 
-pub fn format_bytes_pair(used: u64, total: u64) -> String {
-    format!("{} / {}", format_bytes(used), format_bytes(total))
+/// Compact label for meter suffixes, e.g. `18.9G` like htop.
+pub fn format_bytes_compact(bytes: u64) -> String {
+    let b = bytes as f64;
+    if b < MIB {
+        format!("{:.0}K", b / KIB)
+    } else if b < GIB {
+        format!("{:.1}M", b / MIB)
+    } else {
+        format!("{:.1}G", b / GIB)
+    }
+}
+
+pub fn format_bytes_pair_compact(used: u64, total: u64) -> String {
+    format!("{}/{}", format_bytes_compact(used), format_bytes_compact(total))
 }
 
 pub fn percent(used: u64, total: u64) -> f32 {

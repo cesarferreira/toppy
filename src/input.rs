@@ -32,7 +32,7 @@ fn handle_key(app: &mut App, key: KeyEvent) -> bool {
             return true;
         }
         ViewMode::Help => {
-            if matches!(key.code, KeyCode::Esc | KeyCode::Char('?') | KeyCode::F(1)) {
+            if matches!(key.code, KeyCode::Esc | KeyCode::Char('?')) {
                 app.mode = ViewMode::Table;
             }
             return true;
@@ -42,7 +42,7 @@ fn handle_key(app: &mut App, key: KeyEvent) -> bool {
 
     match key.code {
         KeyCode::Char('q') => app.should_quit = true,
-        KeyCode::Char('?') | KeyCode::F(1) => app.toggle_help(),
+        KeyCode::Char('?') => app.toggle_help(),
         KeyCode::Char('t') => app.toggle_tree(),
         KeyCode::Char('r') => app.force_refresh(),
         KeyCode::Char('+') | KeyCode::Char('=') => app.slower_refresh(),

@@ -6,6 +6,7 @@ use crate::process::model::ProcessRow;
 pub struct MemorySnapshot {
     pub total: u64,
     pub used: u64,
+    pub available: u64,
     pub swap_total: u64,
     pub swap_used: u64,
 }
@@ -98,6 +99,7 @@ impl Collector {
             memory: MemorySnapshot {
                 total: self.system.total_memory(),
                 used: self.system.used_memory(),
+                available: self.system.available_memory(),
                 swap_total: self.system.total_swap(),
                 swap_used: self.system.used_swap(),
             },

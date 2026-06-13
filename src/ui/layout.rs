@@ -17,7 +17,7 @@ pub fn split_root(frame: &Frame, core_count: usize) -> RootLayout {
         .direction(Direction::Vertical)
         .constraints([
             Constraint::Length(cpu_height),
-            Constraint::Length(3),
+            Constraint::Length(4),
             Constraint::Min(6),
             Constraint::Length(1),
         ])

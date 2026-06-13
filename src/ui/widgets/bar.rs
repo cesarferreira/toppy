@@ -1,66 +1,239 @@
 use ratatui::{
     buffer::Buffer,
     layout::Rect,
-    style::{Color, Style},
+    style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::Widget,
 };
 
-use crate::metrics::format::format_percent;
-use crate::theme::utilization_color;
+use crate::{
+    metrics::format::format_percent,
+    theme::{self, utilization_color},
+};
 
-pub struct BarGauge {
-    pub label: String,
-    pub pct: f32,
-    pub suffix: String,
+const EIGHTHS: [char; 9] = [' ', '▏', '▎', '▍', '▌', '▋', '▊', '▉', '█'];
+
+#[derive(Clone, Copy)]
+pub struct BarSegment {
+    pub fraction: f32,
+    pub color: Color,
 }
 
-impl BarGauge {
-    pub fn new(label: impl Into<String>, pct: f32, suffix: impl Into<String>) -> Self {
+pub enum MeterSuffix {
+    Plain(String),
+    BytePair {
+        used: String,
+        total: String,
+        accent: Color,
+    },
+}
+
+pub struct MeterBar {
+    pub label: String,
+    pub label_width: usize,
+    pub pct: f32,
+    pub segments: Vec<BarSegment>,
+    pub pct_inside: bool,
+    pub suffix: Option<MeterSuffix>,
+    /// Fixed width for the suffix column so sibling bars align.
+    pub suffix_slot_width: usize,
+}
+
+impl MeterBar {
+    pub fn utilization(label: impl Into<String>, pct: f32) -> Self {
+        let pct = pct.clamp(0.0, 100.0);
         Self {
             label: label.into(),
-            pct: pct.clamp(0.0, 100.0),
-            suffix: suffix.into(),
+            label_width: 4,
+            pct,
+            segments: vec![BarSegment {
+                fraction: pct / 100.0,
+                color: utilization_color(pct),
+            }],
+            pct_inside: true,
+            suffix: None,
+            suffix_slot_width: 0,
         }
+    }
+
+    pub fn with_label_width(mut self, width: usize) -> Self {
+        self.label_width = width;
+        self
+    }
+
+    pub fn with_pct_inside(mut self, inside: bool) -> Self {
+        self.pct_inside = inside;
+        self
+    }
+
+    pub fn with_suffix_slot_width(mut self, width: usize) -> Self {
+        self.suffix_slot_width = width;
+        self
+    }
+
+    pub fn with_plain_suffix(mut self, suffix: impl Into<String>, slot_width: usize) -> Self {
+        self.suffix = Some(MeterSuffix::Plain(suffix.into()));
+        self.suffix_slot_width = slot_width;
+        self
+    }
+
+    pub fn with_byte_pair_suffix(
+        mut self,
+        used: impl Into<String>,
+        total: impl Into<String>,
+        accent: Color,
+        slot_width: usize,
+    ) -> Self {
+        self.suffix = Some(MeterSuffix::BytePair {
+            used: used.into(),
+            total: total.into(),
+            accent,
+        });
+        self.suffix_slot_width = slot_width;
+        self
+    }
+
+    pub fn with_segments(mut self, segments: Vec<BarSegment>) -> Self {
+        if !segments.is_empty() {
+            self.segments = segments;
+        }
+        self
     }
 }
 
-impl Widget for BarGauge {
+impl Widget for MeterBar {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        if area.width < 4 || area.height == 0 {
+        if area.width < 10 || area.height == 0 {
             return;
         }
 
-        let color = utilization_color(self.pct);
-        let label = format!("{:<8}", self.label);
+        let area_w = area.width as usize;
+        let label = format!("{:>width$}", self.label, width = self.label_width);
         let pct_text = format_percent(self.pct);
-        let suffix = if self.suffix.is_empty() {
-            String::new()
-        } else {
-            format!("  {}", self.suffix)
-        };
+        let suffix_slot = self.suffix_slot_width;
 
-        let right_len = pct_text.len() + suffix.len() + 1;
-        let bar_width = area.width.saturating_sub(label.len() as u16 + right_len as u16 + 2);
+        // label + space + "[" + inner + "]" + suffix slot
+        let overhead = label.len() + 1 + 2 + suffix_slot;
+        if overhead >= area_w {
+            return;
+        }
 
-        let filled = ((self.pct / 100.0) * bar_width as f32).round() as u16;
-        let empty = bar_width.saturating_sub(filled);
+        let mut budget = area_w - overhead;
+        let pct_inside = self.pct_inside && budget > pct_text.len() + 3;
+        if pct_inside {
+            budget -= pct_text.len();
+        }
 
-        let bar = format!(
-            "[{}{}]",
-            "█".repeat(filled as usize),
-            "░".repeat(empty as usize)
-        );
+        let inner_width = budget.max(2);
 
-        let line = Line::from(vec![
-            Span::styled(label, Style::default().fg(Color::White)),
+        let mut spans = vec![
+            Span::styled(label, theme::meter_label_style()),
             Span::raw(" "),
-            Span::styled(bar, Style::default().fg(color)),
-            Span::raw(" "),
-            Span::styled(pct_text, Style::default().fg(color)),
-            Span::styled(suffix, Style::default().fg(Color::DarkGray)),
-        ]);
+            Span::styled("[", Style::default().fg(theme::BAR_BRACKET)),
+        ];
 
-        line.render(area, buf);
+        spans.extend(render_fill(inner_width, &self.segments));
+
+        if pct_inside {
+            let fill_cells = ((self.pct / 100.0) * inner_width as f32).ceil() as usize;
+            let pad = inner_width.saturating_sub(fill_cells + pct_text.len());
+            if pad > 0 {
+                spans.push(Span::styled(
+                    " ".repeat(pad),
+                    Style::default().fg(theme::BAR_TRACK),
+                ));
+            }
+            spans.push(Span::styled(
+                pct_text,
+                theme::utilization_style(self.pct),
+            ));
+        }
+
+        spans.push(Span::styled("]", Style::default().fg(theme::BAR_BRACKET)));
+        spans.extend(render_suffix_slot(self.suffix, suffix_slot));
+
+        Line::from(spans).render(area, buf);
     }
+}
+
+fn render_suffix_slot(suffix: Option<MeterSuffix>, slot_width: usize) -> Vec<Span<'static>> {
+    if slot_width == 0 {
+        return Vec::new();
+    }
+
+    let Some(suffix) = suffix else {
+        return vec![Span::raw(" ".repeat(slot_width))];
+    };
+
+    match suffix {
+        MeterSuffix::Plain(text) => {
+            let body = format!(" {text}");
+            let padded = pad_suffix_body(body, slot_width);
+            vec![Span::styled(padded, theme::meter_value_style())]
+        }
+        MeterSuffix::BytePair { used, total, accent } => {
+            let inner_width = slot_width.saturating_sub(3);
+            let body_len = used.len() + 1 + total.len();
+            let pad = inner_width.saturating_sub(body_len);
+            vec![
+                Span::raw(" "),
+                Span::styled("[", Style::default().fg(theme::BAR_BRACKET)),
+                Span::styled(used, Style::default().fg(accent).add_modifier(Modifier::BOLD)),
+                Span::styled("/", theme::meter_sep_style()),
+                Span::styled(total, theme::meter_total_style()),
+                Span::raw(" ".repeat(pad)),
+                Span::styled("]", Style::default().fg(theme::BAR_BRACKET)),
+            ]
+        }
+    }
+}
+
+fn pad_suffix_body(mut body: String, slot_width: usize) -> String {
+    if body.len() < slot_width {
+        body.push_str(&" ".repeat(slot_width - body.len()));
+    }
+    body
+}
+
+fn render_fill(width: usize, segments: &[BarSegment]) -> Vec<Span<'static>> {
+    if width == 0 {
+        return Vec::new();
+    }
+
+    let mut cells = vec![(theme::BAR_TRACK, '·'); width];
+    let mut cursor = 0.0_f32;
+
+    for segment in segments {
+        let seg_width = (segment.fraction.clamp(0.0, 1.0) * width as f32).max(0.0);
+        let end = (cursor + seg_width).min(width as f32);
+        let start_idx = cursor.floor() as usize;
+        let end_idx = end.ceil() as usize;
+
+        for idx in start_idx..end_idx.min(width) {
+            let cell_start = idx as f32;
+            let cell_end = cell_start + 1.0;
+            let overlap_start = cursor.max(cell_start);
+            let overlap_end = end.min(cell_end);
+            let fill = (overlap_end - overlap_start).clamp(0.0, 1.0);
+            if fill > 0.0 {
+                let level = (fill * 8.0).round() as usize;
+                cells[idx] = (segment.color, EIGHTHS[level.min(8)]);
+            }
+        }
+
+        cursor = end;
+    }
+
+    cells
+        .into_iter()
+        .map(|(color, ch)| Span::styled(ch.to_string(), Style::default().fg(color)))
+        .collect()
+}
+
+pub fn byte_pair_slot_width(pairs: &[(&str, &str)]) -> usize {
+    pairs
+        .iter()
+        .map(|(used, total)| used.len() + 1 + total.len() + 3) // " [" + content + "]"
+        .max()
+        .unwrap_or(0)
 }
