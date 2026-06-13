@@ -6,8 +6,9 @@ use ratatui::{
 };
 
 use crate::metrics::collector::CpuSnapshot;
+use crate::metrics::format::format_percent;
 use crate::theme::{self, CPU_BORDER};
-use crate::ui::widgets::bar::BarGauge;
+use crate::ui::widgets::bar::MeterBar;
 
 pub fn render_cpu(frame: &mut Frame, area: Rect, cpu: &CpuSnapshot, warmed_up: bool) {
     let block = Block::default()
@@ -30,9 +31,10 @@ pub fn render_cpu(frame: &mut Frame, area: Rect, cpu: &CpuSnapshot, warmed_up: b
     }
 
     let cores = cpu.per_core.len().max(1);
-    let rows = inner.height.min(cores as u16);
+    let summary_rows = if inner.height > 1 { 1 } else { 0 };
+    let core_rows = inner.height.saturating_sub(summary_rows).min(cores as u16);
 
-    for i in 0..rows {
+    for i in 0..core_rows {
         let pct = cpu.per_core.get(i as usize).copied().unwrap_or(0.0);
         let row_area = Rect {
             y: inner.y + i as u16,
@@ -40,7 +42,25 @@ pub fn render_cpu(frame: &mut Frame, area: Rect, cpu: &CpuSnapshot, warmed_up: b
             width: inner.width,
             x: inner.x,
         };
-        let gauge = BarGauge::new(format!("C{i:<2}"), pct, "");
-        frame.render_widget(gauge, row_area);
+        let meter = MeterBar::utilization(format!("{}", i + 1), pct).with_label_width(2);
+        frame.render_widget(meter, row_area);
+    }
+
+    if summary_rows == 1 {
+        let summary_area = Rect {
+            y: inner.y + core_rows,
+            height: 1,
+            width: inner.width,
+            x: inner.x,
+        };
+        let summary = format!(
+            "Avg {:>5}   cores {}",
+            format_percent(cpu.global),
+            cores
+        );
+        frame.render_widget(
+            Paragraph::new(summary).style(theme::dim_style()),
+            summary_area,
+        );
     }
 }
