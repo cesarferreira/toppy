@@ -23,11 +23,11 @@ pub fn render_tree(frame: &mut Frame, area: Rect, app: &App) {
     frame.render_widget(block, area);
 
     let visible = inner.height as usize;
-    let flat = app.tree.flatten_visible(&app.processes, &app.tree_expanded);
 
-    let mut lines = Vec::new();
-    for (row_idx, (pid, depth, has_children)) in flat
-        .into_iter()
+    let mut lines = Vec::with_capacity(visible);
+    for (row_idx, &(pid, depth, has_children)) in app
+        .flat_tree
+        .iter()
         .skip(app.scroll_offset)
         .take(visible)
         .enumerate()
