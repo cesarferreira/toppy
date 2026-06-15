@@ -24,6 +24,7 @@ pub struct App {
     pub filtered_indices: Vec<usize>,
     pub tree: ProcessTree,
     pub tree_expanded: HashSet<u32>,
+    pub flat_tree: Vec<(u32, usize, bool)>,
     pub cpu: CpuSnapshot,
     pub memory: MemorySnapshot,
     pub warmed_up: bool,
@@ -52,6 +53,7 @@ impl App {
             filtered_indices: Vec::new(),
             tree: ProcessTree::build(&[]),
             tree_expanded: HashSet::new(),
+            flat_tree: Vec::new(),
             cpu: snapshot.cpu,
             memory: snapshot.memory,
             warmed_up: snapshot.warmed_up,
@@ -106,17 +108,25 @@ impl App {
 
     pub fn rebuild_view(&mut self) {
         sort_processes(&mut self.processes, self.sort, self.sort_desc);
-        self.tree = ProcessTree::build(&self.processes);
+        if self.mode == ViewMode::Tree {
+            self.tree = ProcessTree::build(&self.processes);
+            self.rebuild_flat_tree();
+        } else {
+            self.flat_tree.clear();
+        }
         self.filtered_indices = filter_indices(&self.processes, &self.filter);
         self.clamp_selection();
     }
 
+    fn rebuild_flat_tree(&mut self) {
+        self.flat_tree = self
+            .tree
+            .flatten_visible(&self.processes, &self.tree_expanded);
+    }
+
     pub fn selected_process(&self) -> Option<&ProcessRow> {
         if self.mode == ViewMode::Tree {
-            let flat = self
-                .tree
-                .flatten_visible(&self.processes, &self.tree_expanded);
-            let (pid, _, _) = flat.get(self.selected)?;
+            let (pid, _, _) = self.flat_tree.get(self.selected)?;
             let node = self.tree.by_pid.get(pid)?;
             return Some(&self.processes[node.index]);
         }
@@ -132,9 +142,7 @@ impl App {
 
     pub fn list_len(&self) -> usize {
         if self.mode == ViewMode::Tree {
-            self.tree
-                .flatten_visible(&self.processes, &self.tree_expanded)
-                .len()
+            self.flat_tree.len()
         } else {
             self.filtered_indices.len()
         }
@@ -251,10 +259,13 @@ impl App {
     pub fn toggle_tree(&mut self) {
         if self.mode == ViewMode::Tree {
             self.mode = ViewMode::Table;
+            self.flat_tree.clear();
         } else {
             self.mode = ViewMode::Tree;
             self.selected = 0;
             self.scroll_offset = 0;
+            self.tree = ProcessTree::build(&self.processes);
+            self.rebuild_flat_tree();
         }
     }
 
@@ -297,19 +308,27 @@ impl App {
         if self.mode != ViewMode::Tree {
             return;
         }
-        let flat = self
-            .tree
-            .flatten_visible(&self.processes, &self.tree_expanded);
-        let Some((pid, _, has_children)) = flat.get(self.selected) else {
+        let Some(&(pid, _, has_children)) = self.flat_tree.get(self.selected) else {
             return;
         };
         if !has_children {
             return;
         }
-        if self.tree_expanded.contains(pid) {
-            self.tree_expanded.remove(pid);
-        } else {
-            self.tree_expanded.insert(*pid);
+        if !self.tree_expanded.remove(&pid) {
+            self.tree_expanded.insert(pid);
+        }
+        self.rebuild_flat_tree();
+    }
+
+    pub fn collapse_selected_tree_node(&mut self) {
+        if self.mode != ViewMode::Tree {
+            return;
+        }
+        let Some(&(pid, _, _)) = self.flat_tree.get(self.selected) else {
+            return;
+        };
+        if self.tree_expanded.remove(&pid) {
+            self.rebuild_flat_tree();
         }
     }
 

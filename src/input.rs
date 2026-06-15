@@ -61,14 +61,7 @@ fn handle_key(app: &mut App, key: KeyEvent) -> bool {
         KeyCode::Home => app.move_home(),
         KeyCode::End => app.move_end(),
         KeyCode::Right | KeyCode::Enter if app.mode == ViewMode::Tree => app.toggle_tree_node(),
-        KeyCode::Left if app.mode == ViewMode::Tree => {
-            let flat = app
-                .tree
-                .flatten_visible(&app.processes, &app.tree_expanded);
-            if let Some((pid, _, _)) = flat.get(app.selected) {
-                app.tree_expanded.remove(pid);
-            }
-        }
+        KeyCode::Left if app.mode == ViewMode::Tree => app.collapse_selected_tree_node(),
         KeyCode::Esc => {
             app.clear_filter();
             app.exit_overlay();
