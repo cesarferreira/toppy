@@ -76,7 +76,10 @@ fn render_tree_row(
     let head = format!("{indent}{branch}{:>7} ", proc.pid);
     let cpu = format!("{:>5.1}% ", proc.cpu);
     let mem = format!("{:>8} ", mem_text);
-    let prefix_len = head.chars().count() + cpu.chars().count() + mem.chars().count();
+    // head contains the tree indent which is ASCII spaces, plus a branch glyph
+    // (▶/▼) that is 1 char but multi-byte. Count chars only when non-ASCII present.
+    let head_len = if head.is_ascii() { head.len() } else { head.chars().count() };
+    let prefix_len = head_len + cpu.len() + mem.len();
     let cmd_width = row_width.saturating_sub(prefix_len as u16) as usize;
     let cmd = truncate_to_width(&proc.cmd, cmd_width.max(1));
 
