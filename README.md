@@ -33,7 +33,7 @@
 
 Most system monitors try to show everything at once. **toppy** stays focused: which process is using CPU or memory, and how loaded the machine is right now.
 
-It is a single binary TUI that puts **PID**, **CPU%**, and **Command** front and center, with colorful per-core CPU bars and memory/swap usage at a glance. The release binary is about **1.1 MB** with roughly **11 MB** idle RSS on macOS arm64 — fast to install, cheap to leave running (see [Footprint](#footprint)).
+It is a single binary TUI that puts **PID**, **CPU%**, and **Command** front and center, with colorful per-core CPU bars and memory/swap usage at a glance. The release binary is about **1.0 MB** with roughly **7 MB** idle RSS on macOS arm64 — fast to install, cheap to leave running (see [Footprint](#footprint)).
 
 - **Process-first.** Wide command column, sortable PID/CPU/MEM, live filter, tree view.
 - **Colorful at a glance.** Green → yellow → red utilization bars for CPU, RAM, and swap.
@@ -48,9 +48,9 @@ Measured on **macOS arm64** from a release build (`cargo build --release`):
 
 | | |
 |---|---|
-| **Release binary** | **~1.1 MB** (1,122,192 bytes) |
+| **Release binary** | **~1.0 MB** (1,005,808 bytes) |
 | **Debug binary** | ~6.0 MB (dev builds only) |
-| **Idle RSS** | **~11 MB** (typical while running; ~670 processes on the test machine) |
+| **Idle RSS** | **~7 MB** (typical while running; ~730 processes on the test machine) |
 
 RSS includes the process list held by `sysinfo`, so it grows slightly on machines with more processes. Virtual size on macOS is much larger and is not a useful “real memory” figure.
 
