@@ -15,8 +15,9 @@ pub struct ProcessTree {
 
 impl ProcessTree {
     pub fn build(processes: &[ProcessRow]) -> Self {
-        let mut children_map: HashMap<u32, Vec<u32>> = HashMap::new();
-        let mut index_by_pid: HashMap<u32, usize> = HashMap::new();
+        let mut children_map: HashMap<u32, Vec<u32>> =
+            HashMap::with_capacity(processes.len() / 2);
+        let mut index_by_pid: HashMap<u32, usize> = HashMap::with_capacity(processes.len());
 
         for (i, p) in processes.iter().enumerate() {
             index_by_pid.insert(p.pid, i);
@@ -39,20 +40,11 @@ impl ProcessTree {
             .collect();
         roots.sort_unstable();
 
-        let by_pid = processes
-            .iter()
-            .enumerate()
-            .map(|(i, p)| {
-                let children = children_map.get(&p.pid).cloned().unwrap_or_default();
-                (
-                    p.pid,
-                    TreeNode {
-                        index: i,
-                        children,
-                    },
-                )
-            })
-            .collect();
+        let mut by_pid: HashMap<u32, TreeNode> = HashMap::with_capacity(processes.len());
+        for (i, p) in processes.iter().enumerate() {
+            let children = children_map.remove(&p.pid).unwrap_or_default();
+            by_pid.insert(p.pid, TreeNode { index: i, children });
+        }
 
         Self { roots, by_pid }
     }
