@@ -71,13 +71,18 @@ fn restore_terminal_inner() -> io::Result<()> {
 fn run(terminal: &mut Terminal<CrosstermBackend<Stdout>>, refresh_ms: u64) -> Result<()> {
     let refresh_ms = refresh_ms.clamp(input::MIN_REFRESH_MS, input::MAX_REFRESH_MS);
     let mut app = App::new(refresh_ms);
+    terminal.draw(|frame| ui::render(frame, &mut app))?;
 
     loop {
-        terminal.draw(|frame| ui::render(frame, &mut app))?;
-
-        if crossterm::event::poll(Duration::from_millis(refresh_ms))? {
+        if crossterm::event::poll(Duration::from_millis(app.refresh_ms))? {
+            // Drain any queued events before redrawing — coalesces rapid keystrokes
+            // into a single redraw.
             let evt = crossterm::event::read()?;
             input::handle_event(&mut app, evt);
+            while crossterm::event::poll(Duration::ZERO)? {
+                let evt = crossterm::event::read()?;
+                input::handle_event(&mut app, evt);
+            }
         } else {
             app.tick();
         }
@@ -85,6 +90,8 @@ fn run(terminal: &mut Terminal<CrosstermBackend<Stdout>>, refresh_ms: u64) -> Re
         if app.should_quit {
             break;
         }
+
+        terminal.draw(|frame| ui::render(frame, &mut app))?;
     }
 
     Ok(())
