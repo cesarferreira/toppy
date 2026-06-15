@@ -17,3 +17,9 @@ clap = { version = "4", features = ["derive"] }
 crossterm = "0.29"
 ratatui = "0.30"
 sysinfo = "0.39"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = true
+panic = "abort"
