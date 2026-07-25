@@ -1,4 +1,5 @@
 mod app;
+mod config;
 mod input;
 mod metrics;
 mod process;

@@ -3,6 +3,7 @@ use std::collections::HashSet;
 use sysinfo::Signal;
 
 use crate::{
+    config::Config,
     metrics::collector::{Collector, CpuSnapshot, MemorySnapshot, MetricsSnapshot},
     process::{
         model::{filter_indices, sort_processes, ProcessRow, SortColumn},
@@ -44,6 +45,7 @@ pub struct App {
 
 impl App {
     pub fn new(refresh_ms: u64) -> Self {
+        let settings = Config::load();
         let mut collector = Collector::new();
         collector.warmup();
         let snapshot = collector.refresh();
@@ -65,7 +67,7 @@ impl App {
             mode: ViewMode::Table,
             refresh_ms,
             visible_rows: 10,
-            cpu_cores_expanded: false,
+            cpu_cores_expanded: settings.cpu_cores_expanded,
             status_message: None,
             should_quit: false,
             collector,
@@ -271,6 +273,10 @@ impl App {
 
     pub fn toggle_cpu_cores(&mut self) {
         self.cpu_cores_expanded = !self.cpu_cores_expanded;
+        let _ = Config {
+            cpu_cores_expanded: self.cpu_cores_expanded,
+        }
+        .save();
         self.status_message = Some(if self.cpu_cores_expanded {
             "CPU per-core view".into()
         } else {
