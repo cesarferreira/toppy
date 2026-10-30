@@ -59,7 +59,12 @@ pub fn render_processes(frame: &mut Frame, area: Rect, app: &App) {
     {
         let proc = &app.processes[proc_idx];
         let selected = row_idx + app.scroll_offset == app.selected;
-        lines.push(render_row(proc, selected, list_area.width));
+        lines.push(render_row(
+            proc,
+            selected,
+            app.show_full_command,
+            list_area.width,
+        ));
     }
 
     if lines.is_empty() {
@@ -85,7 +90,12 @@ fn build_title(app: &App) -> String {
     )
 }
 
-fn render_row(proc: &ProcessRow, selected: bool, row_width: u16) -> Line<'static> {
+fn render_row(
+    proc: &ProcessRow,
+    selected: bool,
+    full_command: bool,
+    row_width: u16,
+) -> Line<'static> {
     let cpu_color = utilization_color(proc.cpu);
     let mem_text = format::format_bytes(proc.mem_bytes);
     let pid = format!("{:>7} ", proc.pid);
@@ -93,7 +103,7 @@ fn render_row(proc: &ProcessRow, selected: bool, row_width: u16) -> Line<'static
     let mem = format!("{:>8} ", mem_text);
     let prefix_len = pid.len() + cpu.len() + mem.len();
     let cmd_width = row_width.saturating_sub(prefix_len as u16) as usize;
-    let cmd = truncate_to_width(&proc.cmd, cmd_width.max(1));
+    let cmd = truncate_to_width(proc.command_label(full_command), cmd_width.max(1));
 
     let mut spans = vec![
         Span::raw(pid),

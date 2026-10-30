@@ -32,6 +32,8 @@ pub struct MetricsSnapshot {
 struct CmdEntry {
     cmd: String,
     cmd_lower: String,
+    name: String,
+    name_lower: String,
 }
 
 pub struct Collector {
@@ -92,7 +94,15 @@ impl Collector {
                 let cmd = build_cmd_string(process.cmd(), process.name());
                 let mut cmd_lower = cmd.clone();
                 cmd_lower.make_ascii_lowercase();
-                CmdEntry { cmd, cmd_lower }
+                let name = process.name().to_string_lossy().into_owned();
+                let mut name_lower = name.clone();
+                name_lower.make_ascii_lowercase();
+                CmdEntry {
+                    cmd,
+                    cmd_lower,
+                    name,
+                    name_lower,
+                }
             });
 
             processes.push(ProcessRow {
@@ -101,6 +111,8 @@ impl Collector {
                 mem_bytes: process.memory(),
                 cmd: cmd_entry.cmd.clone(),
                 cmd_lower: cmd_entry.cmd_lower.clone(),
+                name: cmd_entry.name.clone(),
+                name_lower: cmd_entry.name_lower.clone(),
                 parent_pid: process.parent().map(|p| p.as_u32()),
             });
         }
@@ -136,8 +148,9 @@ impl Default for Collector {
     }
 }
 
-/// Same as `System::refresh_processes`, minus tasks: on Linux sysinfo otherwise
-/// lists every thread as its own process (and the parent already sums them).
+/// Same as `System::refresh_processes`, plus the command line (not loaded by
+/// default), minus tasks: on Linux sysinfo otherwise lists every thread as its
+/// own process (and the parent already sums them).
 fn refresh_processes(system: &mut System) {
     system.refresh_processes_specifics(
         ProcessesToUpdate::All,
@@ -147,6 +160,7 @@ fn refresh_processes(system: &mut System) {
             .with_cpu()
             .with_disk_usage()
             .with_exe(UpdateKind::OnlyIfNotSet)
+            .with_cmd(UpdateKind::OnlyIfNotSet)
             .without_tasks(),
     );
 }

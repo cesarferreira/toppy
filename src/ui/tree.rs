@@ -43,6 +43,7 @@ pub fn render_tree(frame: &mut Frame, area: Rect, app: &App) {
             has_children,
             app.tree_expanded.contains(&pid),
             selected,
+            app.show_full_command,
             inner.width,
         ));
     }
@@ -63,6 +64,7 @@ fn render_tree_row(
     has_children: bool,
     expanded: bool,
     selected: bool,
+    full_command: bool,
     row_width: u16,
 ) -> Line<'static> {
     let indent = "  ".repeat(depth);
@@ -81,7 +83,7 @@ fn render_tree_row(
     let head_len = if head.is_ascii() { head.len() } else { head.chars().count() };
     let prefix_len = head_len + cpu.len() + mem.len();
     let cmd_width = row_width.saturating_sub(prefix_len as u16) as usize;
-    let cmd = truncate_to_width(&proc.cmd, cmd_width.max(1));
+    let cmd = truncate_to_width(proc.command_label(full_command), cmd_width.max(1));
 
     let mut spans = vec![
         Span::raw(head),

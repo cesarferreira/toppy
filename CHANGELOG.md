@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Added
+- `p` toggles the command column between the full command line and the program name (remembered across restarts)
+
+### Fixed
+- Linux: list processes instead of every thread
+
 ## [0.4.0] - 2026-07-25
 
 ### Added

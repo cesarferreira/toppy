@@ -5,12 +5,14 @@ use std::path::PathBuf;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Config {
     pub cpu_cores_expanded: bool,
+    pub show_full_command: bool,
 }
 
 impl Default for Config {
     fn default() -> Self {
         Self {
             cpu_cores_expanded: false,
+            show_full_command: true,
         }
     }
 }
@@ -40,8 +42,8 @@ impl Config {
         let mut file = fs::File::create(path)?;
         write!(
             file,
-            "cpu_cores_expanded = {}\n",
-            self.cpu_cores_expanded
+            "cpu_cores_expanded = {}\nshow_full_command = {}\n",
+            self.cpu_cores_expanded, self.show_full_command
         )?;
         Ok(())
     }
@@ -62,7 +64,7 @@ fn config_path() -> Option<PathBuf> {
 }
 
 fn parse(contents: &str) -> Option<Config> {
-    let mut cpu_cores_expanded = false;
+    let mut config = Config::default();
 
     for line in contents.lines() {
         let line = line.split('#').next()?.trim();
@@ -71,18 +73,20 @@ fn parse(contents: &str) -> Option<Config> {
         }
 
         let (key, value) = line.split_once('=')?;
-        if key.trim() != "cpu_cores_expanded" {
-            continue;
-        }
+        let field = match key.trim() {
+            "cpu_cores_expanded" => &mut config.cpu_cores_expanded,
+            "show_full_command" => &mut config.show_full_command,
+            _ => continue,
+        };
 
-        cpu_cores_expanded = match value.trim() {
+        *field = match value.trim() {
             "true" => true,
             "false" => false,
             _ => return None,
         };
     }
 
-    Some(Config { cpu_cores_expanded })
+    Some(config)
 }
 
 #[cfg(test)]
@@ -96,6 +100,15 @@ mod tests {
 
         let cfg = parse("# comment\ncpu_cores_expanded = false\n").unwrap();
         assert!(!cfg.cpu_cores_expanded);
+    }
+
+    #[test]
+    fn parse_show_full_command() {
+        let cfg = parse("cpu_cores_expanded = true\n").unwrap();
+        assert!(cfg.show_full_command, "defaults to true when missing");
+
+        let cfg = parse("cpu_cores_expanded = false\nshow_full_command = false\n").unwrap();
+        assert!(!cfg.show_full_command);
     }
 
     #[test]

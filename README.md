@@ -154,7 +154,7 @@ Focused columns for the work you actually do in a monitor:
 |-----|------|-----|---------|
 | 1234 | 45.2 | 1.2 GB | `/Applications/Firefox.app/...` |
 
-The command column uses the full remaining terminal width — no arbitrary truncation.
+The command column uses the full remaining terminal width — no arbitrary truncation. Press `p` to switch between the full command line and just the program name; the choice is remembered in `~/.config/toppy/config.toml`.
 
 ### Process tree
 
@@ -178,6 +178,7 @@ Press `t` for a full-screen tree view. Expand and collapse branches with `→`, 
 | `P` / `C` / `M` / `T` | Sort by PID / CPU / MEM / Command |
 | `/` | Filter by command or PID |
 | `Esc` | Clear filter / close overlay |
+| `p` | Toggle full command line / program name |
 | `t` | Toggle process tree view |
 | `→` / `←` / `Enter` | Expand/collapse tree node |
 | `k` / `F9` | Kill selected process |

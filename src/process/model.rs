@@ -5,7 +5,16 @@ pub struct ProcessRow {
     pub mem_bytes: u64,
     pub cmd: String,
     pub cmd_lower: String,
+    pub name: String,
+    pub name_lower: String,
     pub parent_pid: Option<u32>,
+}
+
+impl ProcessRow {
+    /// Text for the COMMAND column: full command line, or just the program name.
+    pub fn command_label(&self, full: bool) -> &str {
+        if full { &self.cmd } else { &self.name }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -27,7 +36,12 @@ impl SortColumn {
     }
 }
 
-pub fn sort_processes(processes: &mut [ProcessRow], column: SortColumn, desc: bool) {
+pub fn sort_processes(
+    processes: &mut [ProcessRow],
+    column: SortColumn,
+    desc: bool,
+    full_command: bool,
+) {
     processes.sort_by(|a, b| {
         let ord = match column {
             SortColumn::Pid => a.pid.cmp(&b.pid),
@@ -36,7 +50,8 @@ pub fn sort_processes(processes: &mut [ProcessRow], column: SortColumn, desc: bo
                 .partial_cmp(&b.cpu)
                 .unwrap_or(std::cmp::Ordering::Equal),
             SortColumn::Mem => a.mem_bytes.cmp(&b.mem_bytes),
-            SortColumn::Command => a.cmd_lower.cmp(&b.cmd_lower),
+            SortColumn::Command if full_command => a.cmd_lower.cmp(&b.cmd_lower),
+            SortColumn::Command => a.name_lower.cmp(&b.name_lower),
         };
         if desc { ord.reverse() } else { ord }
     });
@@ -54,7 +69,7 @@ pub fn filter_indices(processes: &[ProcessRow], filter: &str) -> Vec<usize> {
         .iter()
         .enumerate()
         .filter(|(_, p)| {
-            if p.cmd_lower.contains(&needle) {
+            if p.cmd_lower.contains(&needle) || p.name_lower.contains(&needle) {
                 return true;
             }
             if needle_is_digits {

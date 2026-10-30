@@ -40,6 +40,7 @@ pub fn render_help(frame: &mut Frame, area: Rect) {
     lines.push(row("Home/End", "first / last item", theme::STATUS_KEY_NAV));
     lines.push(row("t", "toggle tree view", theme::STATUS_KEY_TREE));
     lines.push(row("c", "toggle CPU per-core view", theme::CPU_BORDER));
+    lines.push(row("p", "toggle full command / name", theme::STATUS_KEY_NAV));
     lines.push(row("→ ← Ret", "expand / collapse tree", theme::STATUS_KEY_TREE));
 
     lines.extend(section("Sorting", theme::STATUS_KEY_SORT));

@@ -38,6 +38,7 @@ pub struct App {
     pub refresh_ms: u64,
     pub visible_rows: u16,
     pub cpu_cores_expanded: bool,
+    pub show_full_command: bool,
     pub status_message: Option<String>,
     pub should_quit: bool,
     collector: Collector,
@@ -68,6 +69,7 @@ impl App {
             refresh_ms,
             visible_rows: 10,
             cpu_cores_expanded: settings.cpu_cores_expanded,
+            show_full_command: settings.show_full_command,
             status_message: None,
             should_quit: false,
             collector,
@@ -109,7 +111,12 @@ impl App {
     }
 
     pub fn rebuild_view(&mut self) {
-        sort_processes(&mut self.processes, self.sort, self.sort_desc);
+        sort_processes(
+            &mut self.processes,
+            self.sort,
+            self.sort_desc,
+            self.show_full_command,
+        );
         if self.mode == ViewMode::Tree {
             self.tree = ProcessTree::build(&self.processes);
             self.rebuild_flat_tree();
@@ -273,15 +280,31 @@ impl App {
 
     pub fn toggle_cpu_cores(&mut self) {
         self.cpu_cores_expanded = !self.cpu_cores_expanded;
-        let _ = Config {
-            cpu_cores_expanded: self.cpu_cores_expanded,
-        }
-        .save();
+        self.save_config();
         self.status_message = Some(if self.cpu_cores_expanded {
             "CPU per-core view".into()
         } else {
             "CPU average view".into()
         });
+    }
+
+    pub fn toggle_full_command(&mut self) {
+        self.show_full_command = !self.show_full_command;
+        self.save_config();
+        self.rebuild_view();
+        self.status_message = Some(if self.show_full_command {
+            "showing full command".into()
+        } else {
+            "showing program name".into()
+        });
+    }
+
+    fn save_config(&self) {
+        let _ = Config {
+            cpu_cores_expanded: self.cpu_cores_expanded,
+            show_full_command: self.show_full_command,
+        }
+        .save();
     }
 
     pub fn open_kill_menu(&mut self) {
