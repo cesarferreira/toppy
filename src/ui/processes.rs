@@ -1,7 +1,7 @@
 use ratatui::{
     Frame,
     layout::Rect,
-    style::{Modifier, Style},
+    style::Style,
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph},
 };
@@ -11,7 +11,7 @@ use crate::{
     metrics::format,
     process::model::ProcessRow,
     theme::{self, PROC_BORDER},
-    ui::row::{command_spans, mem_pct},
+    ui::row::{command_spans, mem_pct, process_line},
 };
 
 pub fn render_processes(frame: &mut Frame, area: Rect, app: &App) {
@@ -78,7 +78,9 @@ pub fn render_processes(frame: &mut Frame, area: Rect, app: &App) {
         )));
     }
 
-    frame.render_widget(Paragraph::new(lines), list_area);
+    for (line, area) in lines.into_iter().zip(list_area.rows()) {
+        frame.render_widget(line, area);
+    }
 }
 
 fn build_title(app: &App) -> String {
@@ -112,14 +114,5 @@ fn render_row(
     ];
     spans.extend(command_spans(proc, full_command, cmd_width, colors));
 
-    if selected {
-        for span in &mut spans {
-            span.style = span
-                .style
-                .bg(theme::SELECTED_BG)
-                .add_modifier(Modifier::BOLD);
-        }
-    }
-
-    Line::from(spans)
+    process_line(spans, selected)
 }

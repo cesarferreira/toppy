@@ -48,7 +48,13 @@ pub fn render(frame: &mut Frame, app: &mut App) {
 mod tests {
     use super::*;
     use crate::app::tests::fixture;
-    use ratatui::{Terminal, backend::TestBackend};
+    use ratatui::{
+        Terminal,
+        backend::TestBackend,
+        buffer::{Buffer, CellWidth},
+        layout::Rect,
+        style::Color,
+    };
 
     fn screen(terminal: &Terminal<TestBackend>) -> String {
         terminal
@@ -116,5 +122,95 @@ mod tests {
         app.toggle_tree();
         terminal.draw(|frame| render(frame, &mut app)).unwrap();
         assert_eq!(app.visible_rows, 30);
+    }
+
+    fn selected_process_panel(
+        mode: ViewMode,
+        width: u16,
+        full_command: bool,
+        scroll_offset: usize,
+    ) -> (Buffer, Rect) {
+        let mut app = fixture();
+        for process in &mut app.processes {
+            process.cmd = "/usr/bin/界worker --jobs".into();
+            process.cmd_lower = process.cmd.to_lowercase();
+            process.name = "界worker".into();
+            process.name_lower = process.name.to_lowercase();
+        }
+        if mode == ViewMode::Tree {
+            app.toggle_tree();
+            app.toggle_tree_node();
+        }
+        app.show_full_command = full_command;
+        app.selected = scroll_offset;
+        app.scroll_offset = scroll_offset;
+        let panel = Rect::new(2, 1, width - 4, 12);
+        let mut terminal = Terminal::new(TestBackend::new(width, 16)).unwrap();
+        terminal
+            .draw(|frame| match mode {
+                ViewMode::Table => processes::render_processes(frame, panel, &app),
+                ViewMode::Tree => tree::render_tree(frame, panel, &app),
+            })
+            .unwrap();
+        let selected = Rect::new(
+            panel.x + 1,
+            panel.y + if mode == ViewMode::Table { 2 } else { 1 },
+            panel.width - 2,
+            1,
+        );
+        (terminal.backend().buffer().clone(), selected)
+    }
+
+    #[test]
+    fn selected_row_background_fills_panel_width() {
+        for mode in [ViewMode::Table, ViewMode::Tree] {
+            for width in [36, 80, 120] {
+                for full_command in [false, true] {
+                    for scroll_offset in [0, 1] {
+                        let (buffer, row) =
+                            selected_process_panel(mode, width, full_command, scroll_offset);
+                        let background = buffer[(row.x, row.y)].bg;
+                        assert_ne!(background, Color::Reset);
+                        let mut x = row.x;
+                        while x < row.right() {
+                            let cell = &buffer[(x, row.y)];
+                            assert_eq!(cell.bg, background, "{mode:?} at x={x}");
+                            // A wide glyph paints its continuation cell; TestBackend
+                            // intentionally leaves that hidden cell at its default style.
+                            x += cell.cell_width().max(1);
+                        }
+                        // Highlight stops at the borders and does not color other rows.
+                        for x in [row.x - 1, row.right()] {
+                            assert_eq!(buffer[(x, row.y)].bg, Color::Reset);
+                        }
+                        assert_eq!(buffer[(row.x, row.y + 1)].bg, Color::Reset);
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn selected_row_text_is_high_contrast_in_both_views() {
+        for mode in [ViewMode::Table, ViewMode::Tree] {
+            for full_command in [false, true] {
+                let (buffer, row) = selected_process_panel(mode, 80, full_command, 0);
+                for x in row.x..row.right() {
+                    let cell = &buffer[(x, row.y)];
+                    if !cell.symbol().trim().is_empty() {
+                        assert_eq!(cell.fg, Color::Rgb(255, 255, 255), "{mode:?} at x={x}");
+                        assert_eq!(cell.bg, Color::Rgb(32, 56, 88), "{mode:?} at x={x}");
+                    }
+                }
+                // Unselected rows retain their usage-dependent foreground colors.
+                let foregrounds: std::collections::HashSet<_> = (row.x..row.right())
+                    .filter_map(|x| {
+                        let cell = &buffer[(x, row.y + 1)];
+                        (!cell.symbol().trim().is_empty()).then_some(cell.fg)
+                    })
+                    .collect();
+                assert!(foregrounds.len() > 1);
+            }
+        }
     }
 }

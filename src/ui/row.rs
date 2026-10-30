@@ -1,6 +1,29 @@
-use ratatui::{style::Style, text::Span};
+use ratatui::{
+    style::{Modifier, Style},
+    text::{Line, Span},
+};
 
-use crate::{process::model::ProcessRow, theme::RowColors, ui::text::truncate_to_width};
+use crate::{
+    process::model::ProcessRow,
+    theme::{self, RowColors},
+    ui::text::truncate_to_width,
+};
+
+/// Give selected rows a consistent high-contrast style across the full panel width.
+pub fn process_line(spans: Vec<Span<'static>>, selected: bool) -> Line<'static> {
+    let mut line = Line::from(spans);
+    if selected {
+        let style = Style::default()
+            .fg(theme::SELECTED_FG)
+            .bg(theme::SELECTED_BG)
+            .add_modifier(Modifier::BOLD);
+        for span in &mut line.spans {
+            span.style = style;
+        }
+        line.style = style;
+    }
+    line
+}
 
 /// Memory use as a percentage of total RAM, for picking the MEM color.
 pub fn mem_pct(proc: &ProcessRow, total_mem: u64) -> f32 {

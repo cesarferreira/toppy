@@ -1,16 +1,16 @@
 use ratatui::{
     Frame,
     layout::Rect,
-    style::{Modifier, Style},
+    style::Style,
     text::{Line, Span},
-    widgets::{Block, Borders, Paragraph},
+    widgets::{Block, Borders},
 };
 
 use crate::{
     app::App,
     metrics::format,
     theme::{self, TREE_BORDER},
-    ui::row::{command_spans, mem_pct},
+    ui::row::{command_spans, mem_pct, process_line},
 };
 
 pub fn render_tree(frame: &mut Frame, area: Rect, app: &App) {
@@ -68,7 +68,9 @@ pub fn render_tree(frame: &mut Frame, area: Rect, app: &App) {
         )));
     }
 
-    frame.render_widget(Paragraph::new(lines), inner);
+    for (line, area) in lines.into_iter().zip(inner.rows()) {
+        frame.render_widget(line, area);
+    }
 }
 
 fn render_tree_row(
@@ -102,14 +104,5 @@ fn render_tree_row(
     ];
     spans.extend(command_spans(proc, full_command, cmd_width, colors));
 
-    if selected {
-        for span in &mut spans {
-            span.style = span
-                .style
-                .bg(theme::SELECTED_BG)
-                .add_modifier(Modifier::BOLD);
-        }
-    }
-
-    Line::from(spans)
+    process_line(spans, selected)
 }

@@ -6,7 +6,8 @@ pub const PROC_BORDER: Color = Color::White;
 pub const TREE_BORDER: Color = Color::Green;
 pub const STATUS_FG: Color = Color::DarkGray;
 pub const HEADER_FG: Color = Color::Yellow;
-pub const SELECTED_BG: Color = Color::DarkGray;
+pub const SELECTED_BG: Color = Color::Rgb(32, 56, 88);
+pub const SELECTED_FG: Color = Color::Rgb(255, 255, 255);
 
 pub const STATUS_KEY_HELP: Color = Color::Rgb(120, 200, 255);
 pub const STATUS_KEY_NAV: Color = Color::Rgb(130, 220, 180);

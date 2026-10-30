@@ -158,6 +158,8 @@ Focused columns for the work you actually do in a monitor:
 
 The command column uses the full remaining terminal width — no arbitrary truncation. Press lowercase `p` to switch between the full command line and just the program name; the choice is remembered across restarts.
 
+The selected row uses bright white text on a dark blue background spanning the full panel width in both table and tree views. Unselected rows keep their usage colors.
+
 By default, the cursor and viewport stay at the same row positions while rankings update underneath them. Stay at the top to watch the busiest processes without the screen chasing a previously selected process.
 
 Press lowercase `f` to follow the selected process instead. Selection then follows its PID and start time across sorting and refreshes, scrolling when needed. A persistent **Following PID …** label identifies the target. Press `f` again to return to stationary rows at the current position. Navigation (`↑`/`↓`, page keys, `Home`/`End`), switching table/tree view, or editing the filter also stops following. Follow mode ends if the process exits, its PID is reused, or it is no longer visible; it is not saved across restarts. Help and the kill menu do not interrupt following.
