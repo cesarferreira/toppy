@@ -8,29 +8,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+## [0.5.0] - 2026-10-30
+
 ### Added
-- btop-style process colors: CPU% and program name colored by CPU load, MEM by memory share, with consistent brightness throughout the list
-- `p` toggles the command column between the full command line and the program name (remembered across restarts)
-- `f` toggles process-follow mode with a persistent target PID indicator; navigation or a missing target stops following
-- Repeatable metrics and PTY footprint measurements, plus process identity, overlay, cache, shortcut, rendering, signal, and terminal regression tests
-
-### Fixed
-- Improve selected-row contrast and extend the highlight across the full process panel width in table and tree views
-- Linux: list processes instead of every thread
-- Keep rows and viewport stationary by default while rankings change, and pin kill confirmations to the original PID and start time independently of follow mode
-- Re-read process identity before signaling instead of trusting the last metrics snapshot
-- Preserve table/tree view under help, filtering, and kill overlays; tree filtering includes matching ancestors
-- Refresh metrics on a deadline even under continuous input, and restore terminal state after partial setup failures
-- Revalidate cached command metadata against process identity and current arguments
-- Support the documented F1 help shortcut, ignore key-release events, and page by the visible row count
-- Show F1/F9 aliases in help and fit the help content on standard-height terminals
-- Keep action feedback visible across scheduled refreshes and validate expansion identities without quadratic searches
-
-### Documentation
-- Describe lowercase `c`/`p`, saved preference paths, overlay behavior, signal safety limits, and measurement commands
+- Toggle full command line vs program name with `p`
+- Keep process rankings stationary unless following
+- Btop-style process colors
+- Install toppy executable as tp
 
 ### Changed
-- Install the executable as `tp` instead of `toppy` (the package remains `toppy`).
+- Ignore .claude directory
+
+### Fixed
+- List processes, not threads, on Linux
+- Make process monitoring and terminal handling reliable
+- Make selected process rows readable and full-width
+- Keep process rows uniformly bright
 
 ## [0.4.0] - 2026-07-25
 
@@ -81,7 +74,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - README footprint notes for release binary size and idle RSS
 
 <!-- next-url -->
-[Unreleased]: https://github.com/cesarferreira/toppy/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/cesarferreira/toppy/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/cesarferreira/toppy/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/cesarferreira/toppy/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/cesarferreira/toppy/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/cesarferreira/toppy/compare/v0.1.0...v0.2.0
