@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::ffi::OsStr;
+use std::ffi::{OsStr, OsString};
 
 use sysinfo::{ProcessRefreshKind, ProcessesToUpdate, System, UpdateKind};
 
@@ -30,10 +30,40 @@ pub struct MetricsSnapshot {
 
 #[derive(Clone)]
 struct CmdEntry {
+    start_time: u64,
+    source: Vec<OsString>,
     cmd: String,
     cmd_lower: String,
     name: String,
     name_lower: String,
+}
+
+impl CmdEntry {
+    fn new(start_time: u64, cmd_parts: &[OsString], name: &OsStr) -> Self {
+        let cmd = build_cmd_string(cmd_parts, name);
+        let mut cmd_lower = cmd.clone();
+        cmd_lower.make_ascii_lowercase();
+        let name = name.to_string_lossy().into_owned();
+        let mut name_lower = name.clone();
+        name_lower.make_ascii_lowercase();
+        Self {
+            start_time,
+            source: cmd_parts.to_vec(),
+            cmd,
+            cmd_lower,
+            name,
+            name_lower,
+        }
+    }
+
+    fn update(&mut self, start_time: u64, cmd_parts: &[OsString], name: &OsStr) {
+        if self.start_time != start_time
+            || self.source != cmd_parts
+            || self.name != name.to_string_lossy()
+        {
+            *self = Self::new(start_time, cmd_parts, name);
+        }
+    }
 }
 
 pub struct Collector {
@@ -84,29 +114,18 @@ impl Collector {
 
         let sys_procs = self.system.processes();
         let mut processes: Vec<ProcessRow> = Vec::with_capacity(sys_procs.len());
-        let mut alive: Vec<u32> = Vec::with_capacity(sys_procs.len());
 
         for (pid, process) in sys_procs {
             let pid_u32 = pid.as_u32();
-            alive.push(pid_u32);
 
             let cmd_entry = self.cmd_cache.entry(pid_u32).or_insert_with(|| {
-                let cmd = build_cmd_string(process.cmd(), process.name());
-                let mut cmd_lower = cmd.clone();
-                cmd_lower.make_ascii_lowercase();
-                let name = process.name().to_string_lossy().into_owned();
-                let mut name_lower = name.clone();
-                name_lower.make_ascii_lowercase();
-                CmdEntry {
-                    cmd,
-                    cmd_lower,
-                    name,
-                    name_lower,
-                }
+                CmdEntry::new(process.start_time(), process.cmd(), process.name())
             });
+            cmd_entry.update(process.start_time(), process.cmd(), process.name());
 
             processes.push(ProcessRow {
                 pid: pid_u32,
+                start_time: process.start_time(),
                 cpu: process.cpu_usage(),
                 mem_bytes: process.memory(),
                 cmd: cmd_entry.cmd.clone(),
@@ -117,11 +136,11 @@ impl Collector {
             });
         }
 
-        // Evict dead pids from the cmd cache.
-        if self.cmd_cache.len() > alive.len() {
-            let alive_set: std::collections::HashSet<u32> = alive.into_iter().collect();
-            self.cmd_cache.retain(|pid, _| alive_set.contains(pid));
-        }
+        self.cmd_cache.retain(|pid, entry| {
+            sys_procs
+                .get(&sysinfo::Pid::from_u32(*pid))
+                .is_some_and(|process| process.start_time() == entry.start_time)
+        });
 
         MetricsSnapshot {
             cpu: CpuSnapshot { per_core, global },
@@ -135,10 +154,6 @@ impl Collector {
             processes,
             warmed_up: self.tick_count >= 2,
         }
-    }
-
-    pub fn system(&self) -> &System {
-        &self.system
     }
 }
 
@@ -160,7 +175,7 @@ fn refresh_processes(system: &mut System) {
             .with_cpu()
             .with_disk_usage()
             .with_exe(UpdateKind::OnlyIfNotSet)
-            .with_cmd(UpdateKind::OnlyIfNotSet)
+            .with_cmd(UpdateKind::Always)
             .without_tasks(),
     );
 }
@@ -185,4 +200,88 @@ fn build_cmd_string(cmd_parts: &[std::ffi::OsString], name: &OsStr) -> String {
         first = false;
     }
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn refresh_does_not_reuse_stale_command_for_live_pid() {
+        let mut collector = Collector::new();
+        let pid = std::process::id();
+        collector.cmd_cache.insert(
+            pid,
+            CmdEntry::new(0, &[], OsStr::new("previous-executable")),
+        );
+        let snapshot = collector.refresh();
+        let process = snapshot.processes.iter().find(|p| p.pid == pid).unwrap();
+        assert_ne!(process.cmd, "previous-executable");
+        assert_ne!(process.name, "previous-executable");
+    }
+
+    #[test]
+    fn empty_command_falls_back_to_name() {
+        assert_eq!(
+            build_cmd_string(&[], OsStr::new("kernel-task")),
+            "kernel-task"
+        );
+    }
+
+    #[test]
+    fn command_preserves_arguments_and_unicode() {
+        let parts = ["/bin/worker", "hello world", "東京"].map(Into::into);
+        assert_eq!(
+            build_cmd_string(&parts, OsStr::new("worker")),
+            "/bin/worker hello world 東京"
+        );
+    }
+
+    #[test]
+    fn cache_updates_arguments_without_a_pid_change() {
+        let mut entry = CmdEntry::new(
+            100,
+            &["worker".into(), "--old".into()],
+            OsStr::new("worker"),
+        );
+        entry.update(
+            100,
+            &["worker".into(), "--NEW".into()],
+            OsStr::new("worker"),
+        );
+        assert_eq!(entry.cmd, "worker --NEW");
+        assert_eq!(entry.cmd_lower, "worker --new");
+    }
+
+    #[test]
+    fn cache_tracks_new_identity_even_when_command_is_unchanged() {
+        let mut entry = CmdEntry::new(100, &[], OsStr::new("worker"));
+        entry.update(200, &[], OsStr::new("worker"));
+        assert_eq!(entry.start_time, 200);
+    }
+
+    #[test]
+    fn cache_retries_empty_command_and_updates_fallback_name() {
+        let mut entry = CmdEntry::new(100, &[], OsStr::new("old"));
+        entry.update(100, &[], OsStr::new("NEW"));
+        assert_eq!(entry.cmd, "NEW");
+        assert_eq!(entry.name_lower, "new");
+        entry.update(
+            100,
+            &["/bin/new".into(), "--ready".into()],
+            OsStr::new("NEW"),
+        );
+        assert_eq!(entry.cmd, "/bin/new --ready");
+    }
+
+    #[test]
+    fn refresh_evicts_dead_entries() {
+        let mut collector = Collector::new();
+        collector
+            .cmd_cache
+            .insert(u32::MAX, CmdEntry::new(0, &[], OsStr::new("dead")));
+        let snapshot = collector.refresh();
+        assert!(!collector.cmd_cache.contains_key(&u32::MAX));
+        assert_eq!(collector.cmd_cache.len(), snapshot.processes.len());
+    }
 }

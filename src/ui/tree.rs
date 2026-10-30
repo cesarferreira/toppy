@@ -1,9 +1,9 @@
 use ratatui::{
+    Frame,
     layout::Rect,
     style::{Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph},
-    Frame,
 };
 
 use crate::{
@@ -41,7 +41,7 @@ pub fn render_tree(frame: &mut Frame, area: Rect, app: &App) {
             proc,
             depth,
             has_children,
-            app.tree_expanded.contains(&pid),
+            app.tree_expanded.contains(&pid) || !app.filter.is_empty(),
             selected,
             app.show_full_command,
             inner.width,
@@ -80,7 +80,11 @@ fn render_tree_row(
     let mem = format!("{:>8} ", mem_text);
     // head contains the tree indent which is ASCII spaces, plus a branch glyph
     // (▶/▼) that is 1 char but multi-byte. Count chars only when non-ASCII present.
-    let head_len = if head.is_ascii() { head.len() } else { head.chars().count() };
+    let head_len = if head.is_ascii() {
+        head.len()
+    } else {
+        head.chars().count()
+    };
     let prefix_len = head_len + cpu.len() + mem.len();
     let cmd_width = row_width.saturating_sub(prefix_len as u16) as usize;
     let cmd = truncate_to_width(proc.command_label(full_command), cmd_width.max(1));
@@ -94,7 +98,10 @@ fn render_tree_row(
 
     if selected {
         for span in &mut spans {
-            span.style = span.style.bg(theme::SELECTED_BG).add_modifier(Modifier::BOLD);
+            span.style = span
+                .style
+                .bg(theme::SELECTED_BG)
+                .add_modifier(Modifier::BOLD);
         }
     }
 

@@ -1,9 +1,9 @@
 use ratatui::{
+    Frame,
     layout::Rect,
     style::{Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph},
-    Frame,
 };
 
 use crate::{
@@ -35,10 +35,7 @@ pub fn render_processes(frame: &mut Frame, area: Rect, app: &App) {
         Span::styled("  COMMAND", theme::header_style()),
     ]);
 
-    let header_area = Rect {
-        height: 1,
-        ..inner
-    };
+    let header_area = Rect { height: 1, ..inner };
     frame.render_widget(Paragraph::new(header), header_area);
 
     let list_area = Rect {
@@ -84,10 +81,7 @@ fn build_title(app: &App) -> String {
     } else {
         format!("  filter: {}", app.filter)
     };
-    format!(
-        " Processes  sort: {} {dir}{filter} ",
-        app.sort.label()
-    )
+    format!(" Processes  sort: {} {dir}{filter} ", app.sort.label())
 }
 
 fn render_row(
@@ -114,7 +108,10 @@ fn render_row(
 
     if selected {
         for span in &mut spans {
-            span.style = span.style.bg(theme::SELECTED_BG).add_modifier(Modifier::BOLD);
+            span.style = span
+                .style
+                .bg(theme::SELECTED_BG)
+                .add_modifier(Modifier::BOLD);
         }
     }
 

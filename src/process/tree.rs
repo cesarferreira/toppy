@@ -15,8 +15,7 @@ pub struct ProcessTree {
 
 impl ProcessTree {
     pub fn build(processes: &[ProcessRow]) -> Self {
-        let mut children_map: HashMap<u32, Vec<u32>> =
-            HashMap::with_capacity(processes.len() / 2);
+        let mut children_map: HashMap<u32, Vec<u32>> = HashMap::with_capacity(processes.len() / 2);
         let mut index_by_pid: HashMap<u32, usize> = HashMap::with_capacity(processes.len());
 
         for (i, p) in processes.iter().enumerate() {
@@ -49,14 +48,10 @@ impl ProcessTree {
         Self { roots, by_pid }
     }
 
-    pub fn flatten_visible(
-        &self,
-        processes: &[ProcessRow],
-        expanded: &HashSet<u32>,
-    ) -> Vec<(u32, usize, bool)> {
+    pub fn flatten_visible(&self, expanded: &HashSet<u32>) -> Vec<(u32, usize, bool)> {
         let mut out = Vec::new();
         for &root in &self.roots {
-            self.walk(root, processes, expanded, 0, &mut out);
+            self.walk(root, expanded, 0, &mut out);
         }
         out
     }
@@ -64,7 +59,6 @@ impl ProcessTree {
     fn walk(
         &self,
         pid: u32,
-        processes: &[ProcessRow],
         expanded: &HashSet<u32>,
         depth: usize,
         out: &mut Vec<(u32, usize, bool)>,
@@ -77,7 +71,7 @@ impl ProcessTree {
 
         if has_children && expanded.contains(&pid) {
             for &child in &node.children {
-                self.walk(child, processes, expanded, depth + 1, out);
+                self.walk(child, expanded, depth + 1, out);
             }
         }
     }

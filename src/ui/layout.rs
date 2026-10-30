@@ -1,6 +1,6 @@
 use ratatui::{
-    layout::{Constraint, Direction, Layout, Rect},
     Frame,
+    layout::{Constraint, Direction, Layout, Rect},
 };
 
 pub struct RootLayout {
@@ -12,7 +12,7 @@ pub struct RootLayout {
 
 pub fn split_root(frame: &Frame, core_count: usize, cpu_expanded: bool) -> RootLayout {
     let cpu_height = if cpu_expanded {
-        core_count.max(1).min(16) as u16 + 2
+        core_count.clamp(1, 16) as u16 + 2
     } else {
         3
     };

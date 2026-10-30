@@ -1,6 +1,8 @@
-.PHONY: all build build-release install install-release clean test check fmt lint run demo release
+.PHONY: all build build-release install install-release clean test test-terminal check fmt lint run demo release measure measure-metrics measure-footprint
 
 LEVEL ?= minor
+TARGET_DIR = $(shell cargo metadata --no-deps --format-version 1 | python3 -c 'import json, sys; print(json.load(sys.stdin)["target_directory"])')
+BINARY ?= $(TARGET_DIR)/release/toppy
 
 # Default target
 all: check build test
@@ -29,10 +31,24 @@ clean:
 test:
 	cargo test
 
+# End-to-end refresh and terminal restoration tests (Linux/macOS, Python 3)
+test-terminal: build-release
+	python3 scripts/test_terminal.py "$(BINARY)" -v
+
+# Repeatable release measurements; run before and after changing performance code
+measure: measure-metrics measure-footprint
+
+measure-metrics:
+	cargo run --release --locked --example measure_metrics
+	cargo test --release measure_expanded_snapshot_refresh -- --ignored --nocapture
+
+measure-footprint: build-release
+	python3 scripts/measure.py "$(BINARY)"
+
 # Run clippy and check
 check:
 	cargo check
-	cargo clippy -- -D warnings
+	cargo clippy --all-targets -- -D warnings
 
 # Format code
 fmt:
@@ -41,7 +57,7 @@ fmt:
 # Lint (check formatting)
 lint:
 	cargo fmt -- --check
-	cargo clippy -- -D warnings
+	cargo clippy --all-targets -- -D warnings
 
 # Run with arguments (usage: make run ARGS="--refresh-rate 500")
 run:

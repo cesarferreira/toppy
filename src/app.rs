@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::time::{Duration, Instant};
 
 use sysinfo::Signal;
 
@@ -6,7 +7,7 @@ use crate::{
     config::Config,
     metrics::collector::{Collector, CpuSnapshot, MemorySnapshot, MetricsSnapshot},
     process::{
-        model::{filter_indices, sort_processes, ProcessRow, SortColumn},
+        model::{ProcessIdentity, ProcessRow, SortColumn, filter_indices, sort_processes},
         tree::ProcessTree,
     },
 };
@@ -15,8 +16,12 @@ use crate::{
 pub enum ViewMode {
     Table,
     Tree,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Overlay {
     Help,
-    KillMenu,
+    KillMenu(ProcessIdentity),
     FilterInput,
 }
 
@@ -35,11 +40,13 @@ pub struct App {
     pub scroll_offset: usize,
     pub filter: String,
     pub mode: ViewMode,
+    pub overlay: Option<Overlay>,
     pub refresh_ms: u64,
     pub visible_rows: u16,
     pub cpu_cores_expanded: bool,
     pub show_full_command: bool,
-    pub status_message: Option<String>,
+    status_message: Option<String>,
+    status_message_until: Option<Instant>,
     pub should_quit: bool,
     collector: Collector,
 }
@@ -66,11 +73,13 @@ impl App {
             scroll_offset: 0,
             filter: String::new(),
             mode: ViewMode::Table,
+            overlay: None,
             refresh_ms,
             visible_rows: 10,
             cpu_cores_expanded: settings.cpu_cores_expanded,
             show_full_command: settings.show_full_command,
             status_message: None,
+            status_message_until: None,
             should_quit: false,
             collector,
         };
@@ -81,18 +90,34 @@ impl App {
     pub fn tick(&mut self) {
         let snapshot = self.collector.refresh();
         self.apply_snapshot(snapshot);
-        self.rebuild_view();
-        self.status_message = None;
+        if self
+            .status_message_until
+            .is_some_and(|until| Instant::now() >= until)
+        {
+            self.status_message = None;
+            self.status_message_until = None;
+        }
+    }
+
+    fn set_status_message(&mut self, message: impl Into<String>) {
+        self.status_message = Some(message.into());
+        self.status_message_until = Some(Instant::now() + Duration::from_secs(3));
+    }
+
+    pub fn status_message(&self) -> Option<&str> {
+        self.status_message_until
+            .filter(|&until| Instant::now() < until)?;
+        self.status_message.as_deref()
     }
 
     pub fn force_refresh(&mut self) {
         self.tick();
-        self.status_message = Some("refreshed".to_string());
+        self.set_status_message("refreshed");
     }
 
     pub fn slower_refresh(&mut self) {
         self.refresh_ms = (self.refresh_ms + 500).min(crate::input::MAX_REFRESH_MS);
-        self.status_message = Some(format!("refresh {}ms", self.refresh_ms));
+        self.set_status_message(format!("refresh {}ms", self.refresh_ms));
     }
 
     pub fn faster_refresh(&mut self) {
@@ -100,37 +125,94 @@ impl App {
             .refresh_ms
             .saturating_sub(500)
             .max(crate::input::MIN_REFRESH_MS);
-        self.status_message = Some(format!("refresh {}ms", self.refresh_ms));
+        self.set_status_message(format!("refresh {}ms", self.refresh_ms));
     }
 
     fn apply_snapshot(&mut self, snapshot: MetricsSnapshot) {
+        let selected = self.selected_process().map(ProcessRow::identity);
+        // Do not carry expansion state across PID reuse.
+        if !self.tree_expanded.is_empty() {
+            let expanded_identities: HashSet<_> = self
+                .processes
+                .iter()
+                .filter(|process| self.tree_expanded.contains(&process.pid))
+                .map(ProcessRow::identity)
+                .collect();
+            self.tree_expanded = snapshot
+                .processes
+                .iter()
+                .filter(|process| expanded_identities.contains(&process.identity()))
+                .map(|process| process.pid)
+                .collect();
+        }
         self.cpu = snapshot.cpu;
         self.memory = snapshot.memory;
         self.warmed_up = snapshot.warmed_up;
         self.processes = snapshot.processes;
+        self.rebuild_view_with_selection(selected);
     }
 
     pub fn rebuild_view(&mut self) {
+        let selected = self.selected_process().map(ProcessRow::identity);
+        self.rebuild_view_with_selection(selected);
+    }
+
+    fn rebuild_view_with_selection(&mut self, selected: Option<ProcessIdentity>) {
         sort_processes(
             &mut self.processes,
             self.sort,
             self.sort_desc,
             self.show_full_command,
         );
+        self.filtered_indices = filter_indices(&self.processes, &self.filter);
         if self.mode == ViewMode::Tree {
             self.tree = ProcessTree::build(&self.processes);
             self.rebuild_flat_tree();
         } else {
             self.flat_tree.clear();
         }
-        self.filtered_indices = filter_indices(&self.processes, &self.filter);
+        if let Some(identity) = selected {
+            let position = if self.mode == ViewMode::Tree {
+                self.flat_tree.iter().position(|(pid, _, _)| {
+                    self.tree
+                        .by_pid
+                        .get(pid)
+                        .is_some_and(|node| self.processes[node.index].identity() == identity)
+                })
+            } else {
+                self.filtered_indices
+                    .iter()
+                    .position(|&i| self.processes[i].identity() == identity)
+            };
+            if let Some(position) = position {
+                self.selected = position;
+            }
+        }
         self.clamp_selection();
+        self.ensure_visible();
     }
 
     fn rebuild_flat_tree(&mut self) {
-        self.flat_tree = self
-            .tree
-            .flatten_visible(&self.processes, &self.tree_expanded);
+        if !self.filter.is_empty() {
+            let mut visible = HashSet::new();
+            for &index in &self.filtered_indices {
+                let mut current = Some(self.processes[index].pid);
+                while let Some(pid) = current {
+                    if !visible.insert(pid) {
+                        break;
+                    }
+                    current = self
+                        .tree
+                        .by_pid
+                        .get(&pid)
+                        .and_then(|node| self.processes[node.index].parent_pid);
+                }
+            }
+            self.flat_tree = self.tree.flatten_visible(&visible);
+            self.flat_tree.retain(|(pid, _, _)| visible.contains(pid));
+            return;
+        }
+        self.flat_tree = self.tree.flatten_visible(&self.tree_expanded);
     }
 
     pub fn selected_process(&self) -> Option<&ProcessRow> {
@@ -143,10 +225,6 @@ impl App {
         self.filtered_indices
             .get(self.selected)
             .map(|&i| &self.processes[i])
-    }
-
-    pub fn selected_pid(&self) -> Option<u32> {
-        self.selected_process().map(|p| p.pid)
     }
 
     pub fn list_len(&self) -> usize {
@@ -228,7 +306,7 @@ impl App {
     }
 
     pub fn enter_filter(&mut self) {
-        self.mode = ViewMode::FilterInput;
+        self.overlay = Some(Overlay::FilterInput);
     }
 
     pub fn push_filter_char(&mut self, ch: char) {
@@ -250,18 +328,14 @@ impl App {
     }
 
     pub fn exit_overlay(&mut self) {
-        self.mode = if self.mode == ViewMode::Tree {
-            ViewMode::Tree
-        } else {
-            ViewMode::Table
-        };
+        self.overlay = None;
     }
 
     pub fn toggle_help(&mut self) {
-        self.mode = if self.mode == ViewMode::Help {
-            ViewMode::Table
+        self.overlay = if self.overlay == Some(Overlay::Help) {
+            None
         } else {
-            ViewMode::Help
+            Some(Overlay::Help)
         };
     }
 
@@ -281,10 +355,10 @@ impl App {
     pub fn toggle_cpu_cores(&mut self) {
         self.cpu_cores_expanded = !self.cpu_cores_expanded;
         self.save_config();
-        self.status_message = Some(if self.cpu_cores_expanded {
-            "CPU per-core view".into()
+        self.set_status_message(if self.cpu_cores_expanded {
+            "CPU per-core view"
         } else {
-            "CPU average view".into()
+            "CPU average view"
         });
     }
 
@@ -292,10 +366,10 @@ impl App {
         self.show_full_command = !self.show_full_command;
         self.save_config();
         self.rebuild_view();
-        self.status_message = Some(if self.show_full_command {
-            "showing full command".into()
+        self.set_status_message(if self.show_full_command {
+            "showing full command"
         } else {
-            "showing program name".into()
+            "showing program name"
         });
     }
 
@@ -308,29 +382,29 @@ impl App {
     }
 
     pub fn open_kill_menu(&mut self) {
-        if self.selected_process().is_some() {
-            self.mode = ViewMode::KillMenu;
+        if let Some(process) = self.selected_process() {
+            self.overlay = Some(Overlay::KillMenu(process.identity()));
         }
     }
 
     pub fn kill_selected(&mut self, signal: Signal) {
-        let Some(pid) = self.selected_pid() else {
+        let Some(Overlay::KillMenu(target)) = self.overlay else {
             return;
         };
+        let pid = target.pid;
 
-        match crate::process::actions::kill_process(self.collector.system(), pid, signal) {
+        match crate::process::actions::kill_process(target, signal) {
             Ok(()) => {
-                self.status_message = Some(format!(
+                self.set_status_message(format!(
                     "sent {} to pid {pid}",
                     crate::process::actions::signal_label(signal)
                 ));
-                self.mode = ViewMode::Table;
             }
             Err(err) => {
-                self.status_message = Some(format!("kill failed: {err:#}"));
-                self.mode = ViewMode::Table;
+                self.set_status_message(format!("kill failed: {err:#}"));
             }
         }
+        self.exit_overlay();
     }
 
     pub fn toggle_tree_node(&mut self) {
@@ -360,5 +434,7 @@ impl App {
             self.rebuild_flat_tree();
         }
     }
-
 }
+
+#[cfg(test)]
+pub(crate) mod tests;

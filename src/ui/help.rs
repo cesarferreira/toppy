@@ -1,9 +1,9 @@
 use ratatui::{
+    Frame,
     layout::Rect,
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Clear, Paragraph},
-    Frame,
 };
 
 use crate::theme;
@@ -17,7 +17,12 @@ pub fn render_help(frame: &mut Frame, area: Rect) {
         area,
     );
 
-    let popup = centered_rect(54, 44, area);
+    let popup = Rect::new(
+        area.x + area.width.saturating_sub(64) / 2,
+        area.y + area.height.saturating_sub(31) / 2,
+        area.width.min(64),
+        area.height.min(31),
+    );
     frame.render_widget(Clear, popup);
 
     let block = Block::default()
@@ -40,8 +45,16 @@ pub fn render_help(frame: &mut Frame, area: Rect) {
     lines.push(row("Home/End", "first / last item", theme::STATUS_KEY_NAV));
     lines.push(row("t", "toggle tree view", theme::STATUS_KEY_TREE));
     lines.push(row("c", "toggle CPU per-core view", theme::CPU_BORDER));
-    lines.push(row("p", "toggle full command / name", theme::STATUS_KEY_NAV));
-    lines.push(row("→ ← Ret", "expand / collapse tree", theme::STATUS_KEY_TREE));
+    lines.push(row(
+        "p",
+        "toggle full command / name",
+        theme::STATUS_KEY_NAV,
+    ));
+    lines.push(row(
+        "→ ← Ret",
+        "expand / collapse tree",
+        theme::STATUS_KEY_TREE,
+    ));
 
     lines.extend(section("Sorting", theme::STATUS_KEY_SORT));
     lines.push(row("P", "sort by PID", theme::STATUS_KEY_SORT));
@@ -51,13 +64,25 @@ pub fn render_help(frame: &mut Frame, area: Rect) {
 
     lines.extend(section("Actions", theme::STATUS_KEY_FILTER));
     lines.push(row("/", "filter processes", theme::STATUS_KEY_FILTER));
-    lines.push(row("k", "kill selected process", theme::STATUS_KEY_KILL));
+    lines.push(row(
+        "k / F9",
+        "kill selected process",
+        theme::STATUS_KEY_KILL,
+    ));
     lines.push(row("r", "force refresh", theme::STATUS_KEY_NAV));
-    lines.push(row("+  -", "slower / faster refresh", theme::STATUS_KEY_NAV));
+    lines.push(row(
+        "+  -",
+        "slower / faster refresh",
+        theme::STATUS_KEY_NAV,
+    ));
 
     lines.extend(section("General", theme::STATUS_KEY_HELP));
-    lines.push(row("?", "toggle this help", theme::STATUS_KEY_HELP));
-    lines.push(row("q", "quit", theme::STATUS_KEY_QUIT));
+    lines.push(row("? / F1", "toggle this help", theme::STATUS_KEY_HELP));
+    lines.push(row(
+        "q / Ctrl-C",
+        "quit (Ctrl-C also in overlays)",
+        theme::STATUS_KEY_QUIT,
+    ));
 
     lines.push(Line::from(""));
     lines.push(Line::from(vec![
@@ -69,6 +94,33 @@ pub fn render_help(frame: &mut Frame, area: Rect) {
         Span::styled(" to close", desc),
     ]));
 
+    if popup.height < 31 {
+        lines = vec![
+            row("↑ ↓", "move selection", theme::STATUS_KEY_NAV),
+            row("PgUp/Dn", "page up / down", theme::STATUS_KEY_NAV),
+            row("Home/End", "first / last item", theme::STATUS_KEY_NAV),
+            row("t", "toggle tree view", theme::STATUS_KEY_TREE),
+            row("→ ← Ret", "expand / collapse tree", theme::STATUS_KEY_TREE),
+            row("c", "toggle CPU per-core view", theme::CPU_BORDER),
+            row("p", "toggle full command / name", theme::STATUS_KEY_NAV),
+            row(
+                "P C M T",
+                "sort PID / CPU / MEM / command",
+                theme::STATUS_KEY_SORT,
+            ),
+            row("/", "filter processes", theme::STATUS_KEY_FILTER),
+            row("k / F9", "kill selected process", theme::STATUS_KEY_KILL),
+            row("r", "force refresh", theme::STATUS_KEY_NAV),
+            row("+  -", "slower / faster refresh", theme::STATUS_KEY_NAV),
+            row("? / F1", "toggle this help", theme::STATUS_KEY_HELP),
+            row("Esc", "close overlay / clear filter", theme::STATUS_KEY_NAV),
+            row(
+                "q / Ctrl-C",
+                "quit (Ctrl-C also in overlays)",
+                theme::STATUS_KEY_QUIT,
+            ),
+        ];
+    }
     frame.render_widget(Paragraph::new(lines).block(block), popup);
 }
 
@@ -82,18 +134,18 @@ fn section(title: &'static str, color: Color) -> Vec<Line<'static>> {
         Line::from(vec![
             Span::raw("  "),
             Span::styled("── ", Style::default().fg(theme::BAR_SEP)),
-            Span::styled(title, Style::default().fg(color).add_modifier(Modifier::BOLD)),
-            Span::styled(" ", Style::default().fg(theme::BAR_SEP)),
             Span::styled(
-                "─".repeat(28),
-                Style::default().fg(theme::BAR_SEP),
+                title,
+                Style::default().fg(color).add_modifier(Modifier::BOLD),
             ),
+            Span::styled(" ", Style::default().fg(theme::BAR_SEP)),
+            Span::styled("─".repeat(28), Style::default().fg(theme::BAR_SEP)),
         ]),
     ]
 }
 
 fn row(keys: &'static str, description: &'static str, key_color: Color) -> Line<'static> {
-    let pad = KEY_COL.saturating_sub(keys.len());
+    let pad = KEY_COL.saturating_sub(keys.chars().count());
     Line::from(vec![
         Span::raw("  "),
         Span::styled(keys, key_style(key_color)),

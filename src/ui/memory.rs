@@ -1,13 +1,13 @@
 use ratatui::{
+    Frame,
     layout::{Constraint, Direction, Layout, Rect},
     style::Style,
     widgets::{Block, Borders},
-    Frame,
 };
 
 use crate::metrics::{collector::MemorySnapshot, format};
 use crate::theme::{self, BAR_SWAP, MEM_BORDER};
-use crate::ui::widgets::bar::{byte_pair_slot_width, BarSegment, MeterBar};
+use crate::ui::widgets::bar::{BarSegment, MeterBar, byte_pair_slot_width};
 
 pub fn render_memory(frame: &mut Frame, area: Rect, mem: &MemorySnapshot) {
     let block = Block::default()
@@ -35,10 +35,7 @@ pub fn render_memory(frame: &mut Frame, area: Rect, mem: &MemorySnapshot) {
     let swap_used = format::format_bytes_compact(mem.swap_used);
     let swap_total = format::format_bytes_compact(mem.swap_total);
 
-    let suffix_slot = byte_pair_slot_width(&[
-        (&mem_used, &mem_total),
-        (&swap_used, &swap_total),
-    ]);
+    let suffix_slot = byte_pair_slot_width(&[(&mem_used, &mem_total), (&swap_used, &swap_total)]);
 
     let ram_segments = ram_segments(mem);
     let ram_meter = MeterBar::utilization("Mem", ram_pct)

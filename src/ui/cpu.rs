@@ -1,15 +1,21 @@
 use ratatui::{
+    Frame,
     layout::{Constraint, Direction, Layout, Rect},
     style::Style,
     widgets::{Block, Borders, Paragraph},
-    Frame,
 };
 
 use crate::metrics::collector::CpuSnapshot;
 use crate::theme::{self, CPU_BORDER};
 use crate::ui::widgets::bar::MeterBar;
 
-pub fn render_cpu(frame: &mut Frame, area: Rect, cpu: &CpuSnapshot, warmed_up: bool, expanded: bool) {
+pub fn render_cpu(
+    frame: &mut Frame,
+    area: Rect,
+    cpu: &CpuSnapshot,
+    warmed_up: bool,
+    expanded: bool,
+) {
     let title = if expanded {
         " CPU — per core "
     } else {
@@ -29,8 +35,7 @@ pub fn render_cpu(frame: &mut Frame, area: Rect, cpu: &CpuSnapshot, warmed_up: b
     }
 
     if !warmed_up {
-        let msg = Paragraph::new("warming up CPU metrics...")
-            .style(theme::dim_style());
+        let msg = Paragraph::new("warming up CPU metrics...").style(theme::dim_style());
         frame.render_widget(msg, inner);
         return;
     }

@@ -1,6 +1,6 @@
-use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
+use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 
-use crate::app::{App, ViewMode};
+use crate::app::{App, Overlay, ViewMode};
 use crate::process::model::SortColumn;
 use sysinfo::Signal;
 
@@ -10,7 +10,7 @@ pub const DEFAULT_REFRESH_MS: u64 = 1500;
 
 pub fn handle_event(app: &mut App, event: Event) -> bool {
     match event {
-        Event::Key(key) => handle_key(app, key),
+        Event::Key(key) if key.kind != KeyEventKind::Release => handle_key(app, key),
         Event::Resize(_, _) => true,
         _ => false,
     }
@@ -22,27 +22,27 @@ fn handle_key(app: &mut App, key: KeyEvent) -> bool {
         return true;
     }
 
-    match app.mode {
-        ViewMode::FilterInput => {
+    match app.overlay {
+        Some(Overlay::FilterInput) => {
             handle_filter_input(app, key);
             return true;
         }
-        ViewMode::KillMenu => {
+        Some(Overlay::KillMenu(_)) => {
             handle_kill_menu(app, key);
             return true;
         }
-        ViewMode::Help => {
-            if matches!(key.code, KeyCode::Esc | KeyCode::Char('?')) {
-                app.mode = ViewMode::Table;
+        Some(Overlay::Help) => {
+            if matches!(key.code, KeyCode::Esc | KeyCode::Char('?') | KeyCode::F(1)) {
+                app.exit_overlay();
             }
             return true;
         }
-        ViewMode::Tree | ViewMode::Table => {}
+        None => {}
     }
 
     match key.code {
         KeyCode::Char('q') => app.should_quit = true,
-        KeyCode::Char('?') => app.toggle_help(),
+        KeyCode::Char('?') | KeyCode::F(1) => app.toggle_help(),
         KeyCode::Char('t') => app.toggle_tree(),
         KeyCode::Char('c') => app.toggle_cpu_cores(),
         KeyCode::Char('p') => app.toggle_full_command(),
@@ -57,8 +57,8 @@ fn handle_key(app: &mut App, key: KeyEvent) -> bool {
         KeyCode::Char('/') => app.enter_filter(),
         KeyCode::Up => app.move_selection(-1),
         KeyCode::Down => app.move_selection(1),
-        KeyCode::PageUp => app.move_page(10, true),
-        KeyCode::PageDown => app.move_page(10, false),
+        KeyCode::PageUp => app.move_page(app.visible_rows, true),
+        KeyCode::PageDown => app.move_page(app.visible_rows, false),
         KeyCode::Home => app.move_home(),
         KeyCode::End => app.move_end(),
         KeyCode::Right | KeyCode::Enter if app.mode == ViewMode::Tree => app.toggle_tree_node(),
@@ -77,10 +77,10 @@ fn handle_filter_input(app: &mut App, key: KeyEvent) {
     match key.code {
         KeyCode::Esc => {
             app.clear_filter();
-            app.mode = ViewMode::Table;
+            app.exit_overlay();
         }
         KeyCode::Enter => {
-            app.mode = ViewMode::Table;
+            app.exit_overlay();
         }
         KeyCode::Backspace => app.pop_filter_char(),
         KeyCode::Char(c) => app.push_filter_char(c),
@@ -90,9 +90,73 @@ fn handle_filter_input(app: &mut App, key: KeyEvent) {
 
 fn handle_kill_menu(app: &mut App, key: KeyEvent) {
     match key.code {
-        KeyCode::Esc => app.mode = ViewMode::Table,
+        KeyCode::Esc => app.exit_overlay(),
         KeyCode::Char('1') => app.kill_selected(Signal::Term),
         KeyCode::Char('2') => app.kill_selected(Signal::Kill),
         _ => {}
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::tests::fixture;
+    use crossterm::event::KeyEventKind;
+
+    fn press(app: &mut App, code: KeyCode) {
+        handle_event(app, Event::Key(KeyEvent::new(code, KeyModifiers::NONE)));
+    }
+
+    #[test]
+    fn f1_toggles_help_without_losing_tree_selection() {
+        let mut app = fixture();
+        press(&mut app, KeyCode::Char('t'));
+        press(&mut app, KeyCode::F(1));
+        assert_eq!(app.overlay, Some(Overlay::Help));
+        assert_eq!(app.mode, ViewMode::Tree);
+        press(&mut app, KeyCode::F(1));
+        assert_eq!(app.overlay, None);
+        assert_eq!(app.selected_process().unwrap().pid, 10);
+    }
+
+    #[test]
+    fn f9_cancel_preserves_tree() {
+        let mut app = fixture();
+        app.toggle_tree();
+        press(&mut app, KeyCode::F(9));
+        assert!(matches!(app.overlay, Some(Overlay::KillMenu(_))));
+        press(&mut app, KeyCode::Esc);
+        assert_eq!(app.overlay, None);
+        assert_eq!(app.mode, ViewMode::Tree);
+    }
+
+    #[test]
+    fn key_release_does_not_repeat_actions() {
+        let mut app = fixture();
+        let mut key = KeyEvent::new(KeyCode::Char('t'), KeyModifiers::NONE);
+        key.kind = KeyEventKind::Release;
+        handle_event(&mut app, Event::Key(key));
+        assert_eq!(app.mode, ViewMode::Table);
+    }
+
+    #[test]
+    fn page_down_uses_visible_row_count() {
+        let mut app = fixture();
+        app.visible_rows = 1;
+        press(&mut app, KeyCode::PageDown);
+        assert_eq!(app.selected, 1);
+        assert_eq!(app.scroll_offset, 1);
+    }
+
+    #[test]
+    fn filter_escape_clears_filter_and_restores_tree() {
+        let mut app = fixture();
+        app.toggle_tree();
+        press(&mut app, KeyCode::Char('/'));
+        press(&mut app, KeyCode::Char('x'));
+        press(&mut app, KeyCode::Esc);
+        assert_eq!(app.filter, "");
+        assert_eq!(app.mode, ViewMode::Tree);
+        assert_eq!(app.overlay, None);
     }
 }

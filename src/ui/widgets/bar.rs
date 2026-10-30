@@ -168,7 +168,12 @@ fn render_suffix_into(
         return;
     }
 
-    let Some(BytePairSuffix { used, total, accent }) = suffix else {
+    let Some(BytePairSuffix {
+        used,
+        total,
+        accent,
+    }) = suffix
+    else {
         for _ in 0..slot_width {
             buf[(x, y)].set_char(' ');
             x += 1;

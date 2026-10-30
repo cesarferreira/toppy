@@ -10,9 +10,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - `p` toggles the command column between the full command line and the program name (remembered across restarts)
+- Repeatable metrics and PTY footprint measurements, plus process identity, overlay, cache, shortcut, rendering, signal, and terminal regression tests
 
 ### Fixed
 - Linux: list processes instead of every thread
+- Keep process selection stable across sorting and refreshes, and pin kill confirmations to the original PID and start time
+- Re-read process identity before signaling instead of trusting the last metrics snapshot
+- Preserve table/tree view under help, filtering, and kill overlays; tree filtering includes matching ancestors
+- Refresh metrics on a deadline even under continuous input, and restore terminal state after partial setup failures
+- Revalidate cached command metadata against process identity and current arguments
+- Support the documented F1 help shortcut, ignore key-release events, and page by the visible row count
+- Show F1/F9 aliases in help and fit the help content on standard-height terminals
+- Keep action feedback visible across scheduled refreshes and validate expansion identities without quadratic searches
+
+### Documentation
+- Describe lowercase `c`/`p`, saved preference paths, overlay behavior, signal safety limits, and measurement commands
 
 ## [0.4.0] - 2026-07-25
 

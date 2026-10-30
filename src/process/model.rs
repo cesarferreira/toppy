@@ -1,6 +1,7 @@
 #[derive(Debug, Clone)]
 pub struct ProcessRow {
     pub pid: u32,
+    pub start_time: u64,
     pub cpu: f32,
     pub mem_bytes: u64,
     pub cmd: String,
@@ -11,10 +12,23 @@ pub struct ProcessRow {
 }
 
 impl ProcessRow {
+    pub fn identity(&self) -> ProcessIdentity {
+        ProcessIdentity {
+            pid: self.pid,
+            start_time: self.start_time,
+        }
+    }
+
     /// Text for the COMMAND column: full command line, or just the program name.
     pub fn command_label(&self, full: bool) -> &str {
         if full { &self.cmd } else { &self.name }
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct ProcessIdentity {
+    pub pid: u32,
+    pub start_time: u64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

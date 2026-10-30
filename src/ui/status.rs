@@ -1,9 +1,9 @@
 use ratatui::{
+    Frame,
     layout::Rect,
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::Paragraph,
-    Frame,
 };
 
 use crate::{app::App, theme};
@@ -24,8 +24,8 @@ pub fn render_status(frame: &mut Frame, area: Rect, app: &App) {
         ),
     ];
 
-    if let Some(msg) = &app.status_message {
-        spans.push(Span::styled(msg.clone(), theme::status_message_style()));
+    if let Some(msg) = app.status_message() {
+        spans.push(Span::styled(msg.to_owned(), theme::status_message_style()));
         spans.push(Span::styled("  ", theme::status_action_style()));
     }
 
@@ -38,6 +38,7 @@ fn shortcut_spans() -> Vec<Span<'static>> {
     let mut spans = Vec::new();
     shortcut(&mut spans, "?", "", "", "help", theme::STATUS_KEY_HELP);
     shortcut(&mut spans, "c", "", "", "cores", theme::CPU_BORDER);
+    shortcut(&mut spans, "p", "", "", "command", theme::STATUS_KEY_NAV);
     shortcut(&mut spans, "+", "-", "", "refresh", theme::STATUS_KEY_NAV);
     shortcut(&mut spans, "P", "C", "M", "sort", theme::STATUS_KEY_SORT);
     shortcut(&mut spans, "/", "", "", "filter", theme::STATUS_KEY_FILTER);
