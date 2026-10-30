@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased] - ReleaseDate
 
 ### Added
+- btop-style process colors: CPU% and program name colored by CPU load, MEM by memory share, and rows fade with distance from the selection
 - `p` toggles the command column between the full command line and the program name (remembered across restarts)
 - `f` toggles process-follow mode with a persistent target PID indicator; navigation or a missing target stops following
 - Repeatable metrics and PTY footprint measurements, plus process identity, overlay, cache, shortcut, rendering, signal, and terminal regression tests
