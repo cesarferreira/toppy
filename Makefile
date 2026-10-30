@@ -2,7 +2,7 @@
 
 LEVEL ?= minor
 TARGET_DIR = $(shell cargo metadata --no-deps --format-version 1 | python3 -c 'import json, sys; print(json.load(sys.stdin)["target_directory"])')
-BINARY ?= $(TARGET_DIR)/release/toppy
+BINARY ?= $(TARGET_DIR)/release/tp
 
 # Default target
 all: check build test
@@ -66,7 +66,7 @@ run:
 # Quick demo
 demo: install
 	@echo "=== toppy demo ==="
-	toppy --help
+	tp --help
 
 # Bump version, finalize CHANGELOG.md, tag, publish, and push (requires cargo-release)
 release:

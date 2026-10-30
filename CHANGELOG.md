@@ -28,6 +28,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Documentation
 - Describe lowercase `c`/`p`, saved preference paths, overlay behavior, signal safety limits, and measurement commands
 
+### Changed
+- Install the executable as `tp` instead of `toppy` (the package remains `toppy`).
+
 ## [0.4.0] - 2026-07-25
 
 ### Added

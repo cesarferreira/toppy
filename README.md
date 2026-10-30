@@ -58,9 +58,9 @@ To reproduce:
 
 ```bash
 cargo build --release
-ls -lh target/release/toppy
-# run toppy, then in another terminal:
-ps -o rss,command -p $(pgrep -n toppy)
+ls -lh target/release/tp
+# run tp, then in another terminal:
+ps -o rss,command -p $(pgrep -n tp)
 ```
 
 ## Install
@@ -71,10 +71,12 @@ Requires [Rust](https://rustup.rs) **1.85+** and `~/.cargo/bin` on your `PATH`.
 cargo install toppy
 ```
 
+The package is named `toppy`; the command it installs is `tp`.
+
 Verify:
 
 ```bash
-toppy --help
+tp --help
 ```
 
 <details>
@@ -98,7 +100,7 @@ Run without installing:
 
 ```bash
 make build-release
-./target/release/toppy
+./target/release/tp
 ```
 
 </details>
@@ -109,13 +111,13 @@ make build-release
 Launch the monitor:
 
 ```bash
-toppy
+tp
 ```
 
 Custom refresh interval (default `1500` ms):
 
 ```bash
-toppy --refresh-rate 2000
+tp --refresh-rate 2000
 ```
 
 Use `+` / `-` while running to adjust the interval (200 ms–10 s).
@@ -248,7 +250,7 @@ Measure before optimizing, using the same release profile, terminal size, refres
 make measure-metrics   # collection p50/p95; sort/filter/tree at 100, 1k, 10k rows
 make measure-footprint # 3 x 10-second samples in a 120x40 PTY, 1500ms refresh
 # Or pass a custom binary, duration, and sample count:
-python3 scripts/measure.py target/release/toppy --seconds 30 --samples 5
+python3 scripts/measure.py target/release/tp --seconds 30 --samples 5
 ```
 
 `measure.py` reports JSON with binary size, startup-to-first-frame latency, median idle RSS, and CPU as a percentage of one core. It uses `/proc` on Linux and `ps` on macOS. The example measures collection plus synthetic sorting, filtering, tree building, and flattening. An ignored release-mode test also measures full application snapshot processing with 10,000 expanded processes, excluding collection and rendering. Live measurements depend on host load and process count; they are observations, not CI performance thresholds.
