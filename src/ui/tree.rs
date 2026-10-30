@@ -37,12 +37,7 @@ pub fn render_tree(frame: &mut Frame, area: Rect, app: &App) {
         };
         let proc = &app.processes[node.index];
         let pos = row_idx + app.scroll_offset;
-        let colors = theme::row_colors(
-            proc.cpu,
-            mem_pct(proc, app.memory.total),
-            pos.abs_diff(app.selected),
-            visible,
-        );
+        let colors = theme::row_colors(proc.cpu, mem_pct(proc, app.memory.total));
         let branch = if !has_children {
             "  "
         } else if app.tree_expanded.contains(&pid) || !app.filter.is_empty() {

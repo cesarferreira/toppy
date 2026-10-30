@@ -213,4 +213,48 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn unselected_row_colors_do_not_fade_with_distance_from_selection() {
+        for mode in [ViewMode::Table, ViewMode::Tree] {
+            for selected in [0, 2] {
+                let mut app = fixture();
+                for process in &mut app.processes {
+                    process.cpu = 50.0;
+                    process.parent_pid = None;
+                }
+                app.rebuild_view();
+                if mode == ViewMode::Tree {
+                    app.toggle_tree();
+                }
+                app.selected = selected;
+                let mut terminal = Terminal::new(TestBackend::new(80, 12)).unwrap();
+                terminal
+                    .draw(|frame| match mode {
+                        ViewMode::Table => processes::render_processes(frame, frame.area(), &app),
+                        ViewMode::Tree => tree::render_tree(frame, frame.area(), &app),
+                    })
+                    .unwrap();
+                let buffer = terminal.backend().buffer();
+                let first_row = if mode == ViewMode::Table { 2 } else { 1 };
+                for index in 0..3 {
+                    if index == selected {
+                        continue;
+                    }
+                    let y = first_row + index as u16;
+                    let text: String = (0..80).map(|x| buffer[(x, y)].symbol()).collect();
+                    let pid_x = text.find(char::is_numeric).unwrap() as u16;
+                    assert_eq!(buffer[(pid_x, y)].fg, Color::Rgb(204, 204, 204));
+                    for label in ["50.0%", "4.0 KB", "worker-"] {
+                        let x = text.find(label).unwrap() as u16;
+                        assert_eq!(
+                            buffer[(x, y)].fg,
+                            Color::Rgb(220, 209, 121),
+                            "{mode:?} row={index} {label}"
+                        );
+                    }
+                }
+            }
+        }
+    }
 }

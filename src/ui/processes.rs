@@ -56,12 +56,7 @@ pub fn render_processes(frame: &mut Frame, area: Rect, app: &App) {
     {
         let proc = &app.processes[proc_idx];
         let pos = row_idx + app.scroll_offset;
-        let colors = theme::row_colors(
-            proc.cpu,
-            mem_pct(proc, app.memory.total),
-            pos.abs_diff(app.selected),
-            visible,
-        );
+        let colors = theme::row_colors(proc.cpu, mem_pct(proc, app.memory.total));
         lines.push(render_row(
             proc,
             pos == app.selected,

@@ -158,7 +158,7 @@ Focused columns for the work you actually do in a monitor:
 
 The command column uses the full remaining terminal width — no arbitrary truncation. Press lowercase `p` to switch between the full command line and just the program name; the choice is remembered across restarts.
 
-The selected row uses bright white text on a dark blue background spanning the full panel width in both table and tree views. Unselected rows keep their usage colors.
+The selected row uses bright white text on a dark blue background spanning the full panel width in both table and tree views. Unselected rows keep consistent brightness throughout the list, with colors determined only by CPU and memory usage.
 
 By default, the cursor and viewport stay at the same row positions while rankings update underneath them. Stay at the top to watch the busiest processes without the screen chasing a previously selected process.
 
