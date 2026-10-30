@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::ffi::OsStr;
 
-use sysinfo::{ProcessesToUpdate, System};
+use sysinfo::{ProcessRefreshKind, ProcessesToUpdate, System, UpdateKind};
 
 use crate::process::model::ProcessRow;
 
@@ -45,7 +45,7 @@ impl Collector {
         let mut system = System::new();
         system.refresh_memory();
         system.refresh_cpu_usage();
-        system.refresh_processes(ProcessesToUpdate::All, true);
+        refresh_processes(&mut system);
         Self {
             system,
             tick_count: 0,
@@ -56,14 +56,14 @@ impl Collector {
     pub fn warmup(&mut self) {
         std::thread::sleep(sysinfo::MINIMUM_CPU_UPDATE_INTERVAL);
         self.system.refresh_cpu_usage();
-        self.system.refresh_processes(ProcessesToUpdate::All, true);
+        refresh_processes(&mut self.system);
         self.tick_count = 1;
     }
 
     pub fn refresh(&mut self) -> MetricsSnapshot {
         self.system.refresh_cpu_usage();
         self.system.refresh_memory();
-        self.system.refresh_processes(ProcessesToUpdate::All, true);
+        refresh_processes(&mut self.system);
         self.tick_count += 1;
 
         let cpus = self.system.cpus();
@@ -134,6 +134,21 @@ impl Default for Collector {
     fn default() -> Self {
         Self::new()
     }
+}
+
+/// Same as `System::refresh_processes`, minus tasks: on Linux sysinfo otherwise
+/// lists every thread as its own process (and the parent already sums them).
+fn refresh_processes(system: &mut System) {
+    system.refresh_processes_specifics(
+        ProcessesToUpdate::All,
+        true,
+        ProcessRefreshKind::nothing()
+            .with_memory()
+            .with_cpu()
+            .with_disk_usage()
+            .with_exe(UpdateKind::OnlyIfNotSet)
+            .without_tasks(),
+    );
 }
 
 fn build_cmd_string(cmd_parts: &[std::ffi::OsString], name: &OsStr) -> String {
