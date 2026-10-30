@@ -3,6 +3,7 @@ pub mod help;
 pub mod layout;
 pub mod memory;
 pub mod processes;
+pub mod row;
 pub mod status;
 pub mod text;
 pub mod tree;

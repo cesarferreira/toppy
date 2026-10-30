@@ -9,8 +9,8 @@ use ratatui::{
 use crate::{
     app::App,
     metrics::format,
-    theme::{self, TREE_BORDER, utilization_color},
-    ui::text::truncate_to_width,
+    theme::{self, TREE_BORDER},
+    ui::row::{command_spans, mem_pct},
 };
 
 pub fn render_tree(frame: &mut Frame, area: Rect, app: &App) {
@@ -36,13 +36,26 @@ pub fn render_tree(frame: &mut Frame, area: Rect, app: &App) {
             continue;
         };
         let proc = &app.processes[node.index];
-        let selected = row_idx + app.scroll_offset == app.selected;
+        let pos = row_idx + app.scroll_offset;
+        let colors = theme::row_colors(
+            proc.cpu,
+            mem_pct(proc, app.memory.total),
+            pos.abs_diff(app.selected),
+            visible,
+        );
+        let branch = if !has_children {
+            "  "
+        } else if app.tree_expanded.contains(&pid) || !app.filter.is_empty() {
+            "▼ "
+        } else {
+            "▶ "
+        };
         lines.push(render_tree_row(
             proc,
             depth,
-            has_children,
-            app.tree_expanded.contains(&pid) || !app.filter.is_empty(),
-            selected,
+            branch,
+            pos == app.selected,
+            colors,
             app.show_full_command,
             inner.width,
         ));
@@ -61,19 +74,13 @@ pub fn render_tree(frame: &mut Frame, area: Rect, app: &App) {
 fn render_tree_row(
     proc: &crate::process::model::ProcessRow,
     depth: usize,
-    has_children: bool,
-    expanded: bool,
+    branch: &str,
     selected: bool,
+    colors: theme::RowColors,
     full_command: bool,
     row_width: u16,
 ) -> Line<'static> {
     let indent = "  ".repeat(depth);
-    let branch = if has_children {
-        if expanded { "▼ " } else { "▶ " }
-    } else {
-        "  "
-    };
-    let cpu_color = utilization_color(proc.cpu);
     let mem_text = format::format_bytes(proc.mem_bytes);
     let head = format!("{indent}{branch}{:>7} ", proc.pid);
     let cpu = format!("{:>5.1}% ", proc.cpu);
@@ -87,14 +94,13 @@ fn render_tree_row(
     };
     let prefix_len = head_len + cpu.len() + mem.len();
     let cmd_width = row_width.saturating_sub(prefix_len as u16) as usize;
-    let cmd = truncate_to_width(proc.command_label(full_command), cmd_width.max(1));
 
     let mut spans = vec![
-        Span::raw(head),
-        Span::styled(cpu, Style::default().fg(cpu_color)),
-        Span::raw(mem),
-        Span::raw(cmd),
+        Span::styled(head, Style::default().fg(colors.base)),
+        Span::styled(cpu, Style::default().fg(colors.cpu)),
+        Span::styled(mem, Style::default().fg(colors.mem)),
     ];
+    spans.extend(command_spans(proc, full_command, cmd_width, colors));
 
     if selected {
         for span in &mut spans {
