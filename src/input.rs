@@ -46,6 +46,7 @@ fn handle_key(app: &mut App, key: KeyEvent) -> bool {
         KeyCode::Char('t') => app.toggle_tree(),
         KeyCode::Char('c') => app.toggle_cpu_cores(),
         KeyCode::Char('p') => app.toggle_full_command(),
+        KeyCode::Char('f') => app.toggle_follow(),
         KeyCode::Char('r') => app.force_refresh(),
         KeyCode::Char('+') | KeyCode::Char('=') => app.slower_refresh(),
         KeyCode::Char('-') | KeyCode::Char('_') => app.faster_refresh(),
@@ -158,5 +159,14 @@ mod tests {
         assert_eq!(app.filter, "");
         assert_eq!(app.mode, ViewMode::Tree);
         assert_eq!(app.overlay, None);
+    }
+
+    #[test]
+    fn follow_key_in_filter_is_text_not_a_follow_toggle() {
+        let mut app = fixture();
+        press(&mut app, KeyCode::Char('/'));
+        press(&mut app, KeyCode::Char('f'));
+        assert_eq!(app.filter, "f");
+        assert_eq!(app.followed_process, None);
     }
 }

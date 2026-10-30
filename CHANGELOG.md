@@ -10,11 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - `p` toggles the command column between the full command line and the program name (remembered across restarts)
+- `f` toggles process-follow mode with a persistent target PID indicator; navigation or a missing target stops following
 - Repeatable metrics and PTY footprint measurements, plus process identity, overlay, cache, shortcut, rendering, signal, and terminal regression tests
 
 ### Fixed
 - Linux: list processes instead of every thread
-- Keep process selection stable across sorting and refreshes, and pin kill confirmations to the original PID and start time
+- Keep rows and viewport stationary by default while rankings change, and pin kill confirmations to the original PID and start time independently of follow mode
 - Re-read process identity before signaling instead of trusting the last metrics snapshot
 - Preserve table/tree view under help, filtering, and kill overlays; tree filtering includes matching ancestors
 - Refresh metrics on a deadline even under continuous input, and restore terminal state after partial setup failures

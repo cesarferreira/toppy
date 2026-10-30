@@ -43,6 +43,11 @@ pub fn render_help(frame: &mut Frame, area: Rect) {
     lines.push(row("↑ ↓", "move selection", theme::STATUS_KEY_NAV));
     lines.push(row("PgUp/Dn", "page up / down", theme::STATUS_KEY_NAV));
     lines.push(row("Home/End", "first / last item", theme::STATUS_KEY_NAV));
+    lines.push(row(
+        "f",
+        "follow selected process (toggle)",
+        theme::STATUS_KEY_NAV,
+    ));
     lines.push(row("t", "toggle tree view", theme::STATUS_KEY_TREE));
     lines.push(row("c", "toggle CPU per-core view", theme::CPU_BORDER));
     lines.push(row(
@@ -99,6 +104,11 @@ pub fn render_help(frame: &mut Frame, area: Rect) {
             row("↑ ↓", "move selection", theme::STATUS_KEY_NAV),
             row("PgUp/Dn", "page up / down", theme::STATUS_KEY_NAV),
             row("Home/End", "first / last item", theme::STATUS_KEY_NAV),
+            row(
+                "f",
+                "follow selected process (toggle)",
+                theme::STATUS_KEY_NAV,
+            ),
             row("t", "toggle tree view", theme::STATUS_KEY_TREE),
             row("→ ← Ret", "expand / collapse tree", theme::STATUS_KEY_TREE),
             row("c", "toggle CPU per-core view", theme::CPU_BORDER),

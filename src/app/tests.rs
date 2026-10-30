@@ -40,6 +40,7 @@ pub(crate) fn fixture() -> App {
         sort: SortColumn::Cpu,
         sort_desc: true,
         selected: 0,
+        followed_process: None,
         scroll_offset: 0,
         filter: String::new(),
         mode: ViewMode::Table,
@@ -58,16 +59,18 @@ pub(crate) fn fixture() -> App {
 }
 
 #[test]
-fn sort_keeps_selected_process() {
+fn follow_sort_keeps_selected_process() {
     let mut app = fixture();
+    press_follow(&mut app);
     assert_eq!(app.selected_process().unwrap().pid, 20);
     app.set_sort(SortColumn::Pid);
     assert_eq!(app.selected_process().unwrap().pid, 20);
 }
 
 #[test]
-fn refresh_keeps_selected_process_after_cpu_reordering() {
+fn follow_refresh_keeps_selected_process_after_cpu_reordering() {
     let mut app = fixture();
+    press_follow(&mut app);
     app.apply_snapshot(MetricsSnapshot {
         cpu: app.cpu.clone(),
         memory: app.memory.clone(),
@@ -79,6 +82,209 @@ fn refresh_keeps_selected_process_after_cpu_reordering() {
         ],
     });
     assert_eq!(app.selected_process().unwrap().pid, 20);
+}
+
+fn press_follow(app: &mut App) {
+    use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
+    crate::input::handle_event(
+        app,
+        Event::Key(KeyEvent::new(KeyCode::Char('f'), KeyModifiers::NONE)),
+    );
+}
+
+fn reorder_snapshot(app: &App) -> MetricsSnapshot {
+    MetricsSnapshot {
+        cpu: app.cpu.clone(),
+        memory: app.memory.clone(),
+        warmed_up: true,
+        processes: vec![
+            row(10, 99.0, None),
+            row(20, 1.0, Some(10)),
+            row(30, 50.0, None),
+        ],
+    }
+}
+
+#[test]
+fn default_refresh_keeps_top_row_and_viewport_stationary() {
+    let mut app = fixture();
+    app.visible_rows = 1;
+    app.apply_snapshot(reorder_snapshot(&app));
+    assert_eq!(app.selected, 0);
+    assert_eq!(app.scroll_offset, 0);
+    assert_eq!(app.selected_process().unwrap().pid, 10);
+}
+
+#[test]
+fn default_sort_keeps_selected_row_instead_of_chasing_process() {
+    let mut app = fixture();
+    app.set_sort(SortColumn::Pid);
+    assert_eq!(app.selected, 0);
+    assert_eq!(app.scroll_offset, 0);
+    assert_eq!(app.selected_process().unwrap().pid, 10);
+}
+
+#[test]
+fn default_refresh_preserves_a_scrolled_viewport() {
+    let mut app = fixture();
+    app.visible_rows = 1;
+    app.move_selection(1);
+    assert_eq!(app.selected_process().unwrap().pid, 30);
+    let mut snapshot = reorder_snapshot(&app);
+    snapshot.processes[2].cpu = 100.0;
+    app.apply_snapshot(snapshot);
+    assert_eq!(app.selected, 1);
+    assert_eq!(app.scroll_offset, 1);
+    assert_eq!(app.selected_process().unwrap().pid, 10);
+}
+
+#[test]
+fn follow_toggle_tracks_then_releases_selected_process() {
+    let mut app = fixture();
+    app.visible_rows = 1;
+    press_follow(&mut app);
+    app.apply_snapshot(reorder_snapshot(&app));
+    assert_eq!(app.selected_process().unwrap().pid, 20);
+    assert_eq!(app.selected, 2);
+    assert_eq!(app.scroll_offset, 2);
+    press_follow(&mut app);
+    let mut snapshot = reorder_snapshot(&app);
+    snapshot.processes[1].cpu = 100.0;
+    app.apply_snapshot(snapshot);
+    assert_eq!(app.selected, 2);
+    assert_eq!(app.scroll_offset, 2);
+    assert_eq!(app.selected_process().unwrap().pid, 30);
+}
+
+#[test]
+fn follow_stops_when_pid_is_reused_and_does_not_reattach() {
+    let mut app = fixture();
+    press_follow(&mut app);
+    let mut snapshot = reorder_snapshot(&app);
+    snapshot.processes[1].start_time = 200;
+    app.apply_snapshot(snapshot);
+    assert_eq!(app.followed_process, None);
+    assert_eq!(app.selected, 0);
+    assert!(
+        app.status_message()
+            .unwrap()
+            .contains("stopped following PID 20")
+    );
+    let mut snapshot = reorder_snapshot(&app);
+    snapshot.processes[1].cpu = 100.0;
+    snapshot.processes[1].start_time = 200;
+    app.apply_snapshot(snapshot);
+    assert_eq!(app.selected, 0);
+    assert_eq!(app.followed_process, None);
+}
+
+#[test]
+fn follow_stops_when_target_exits() {
+    let mut app = fixture();
+    press_follow(&mut app);
+    let mut snapshot = reorder_snapshot(&app);
+    snapshot.processes.retain(|process| process.pid != 20);
+    app.apply_snapshot(snapshot);
+    assert_eq!(app.followed_process, None);
+    assert_eq!(app.selected_process().unwrap().pid, 10);
+}
+
+#[test]
+fn empty_list_cannot_enable_follow() {
+    let mut app = fixture();
+    app.filter = "no-such-process".into();
+    app.rebuild_view();
+    press_follow(&mut app);
+    assert_eq!(app.followed_process, None);
+}
+
+#[test]
+fn navigation_stops_following_without_snapback_on_refresh() {
+    for navigate in [App::move_home, App::move_end] {
+        let mut app = fixture();
+        press_follow(&mut app);
+        navigate(&mut app);
+        let selected = app.selected;
+        app.apply_snapshot(reorder_snapshot(&app));
+        assert_eq!(app.followed_process, None);
+        assert_eq!(app.selected, selected);
+    }
+    let mut app = fixture();
+    press_follow(&mut app);
+    app.move_selection(1);
+    app.apply_snapshot(reorder_snapshot(&app));
+    assert_eq!(app.followed_process, None);
+    assert_eq!(app.selected, 1);
+    assert_eq!(app.selected_process().unwrap().pid, 30);
+}
+
+#[test]
+fn follow_survives_help_and_kill_menu_refreshes() {
+    let mut app = fixture();
+    press_follow(&mut app);
+    app.toggle_help();
+    app.apply_snapshot(reorder_snapshot(&app));
+    assert_eq!(app.selected_process().unwrap().pid, 20);
+    assert_eq!(app.overlay, Some(Overlay::Help));
+    app.exit_overlay();
+    app.open_kill_menu();
+    app.apply_snapshot(reorder_snapshot(&app));
+    assert_eq!(app.selected_process().unwrap().pid, 20);
+    assert_eq!(
+        app.overlay,
+        Some(Overlay::KillMenu(ProcessIdentity {
+            pid: 20,
+            start_time: 20
+        }))
+    );
+}
+
+#[test]
+fn kill_target_is_pinned_even_when_normal_mode_selection_changes() {
+    let mut app = fixture();
+    app.open_kill_menu();
+    app.apply_snapshot(reorder_snapshot(&app));
+    assert_eq!(app.selected_process().unwrap().pid, 10);
+    assert_eq!(
+        app.overlay,
+        Some(Overlay::KillMenu(ProcessIdentity {
+            pid: 20,
+            start_time: 20
+        }))
+    );
+}
+
+#[test]
+fn switching_view_or_editing_filter_stops_follow() {
+    let mut app = fixture();
+    press_follow(&mut app);
+    app.toggle_tree();
+    assert_eq!(app.followed_process, None);
+    press_follow(&mut app);
+    app.enter_filter();
+    app.push_filter_char('x');
+    assert_eq!(app.followed_process, None);
+}
+
+#[test]
+fn follow_in_expanded_tree_tracks_identity_when_siblings_are_inserted() {
+    let mut app = fixture();
+    app.toggle_tree();
+    app.toggle_tree_node();
+    app.move_selection(1);
+    press_follow(&mut app);
+    let mut snapshot = reorder_snapshot(&app);
+    snapshot.processes.push(row(15, 80.0, Some(10)));
+    app.apply_snapshot(snapshot);
+    assert_eq!(app.selected, 2);
+    assert_eq!(app.selected_process().unwrap().pid, 20);
+    assert_eq!(
+        app.followed_process,
+        Some(ProcessIdentity {
+            pid: 20,
+            start_time: 20
+        })
+    );
 }
 
 #[test]

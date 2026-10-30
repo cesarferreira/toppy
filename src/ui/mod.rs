@@ -71,6 +71,19 @@ mod tests {
     }
 
     #[test]
+    fn help_explains_follow_at_standard_sizes() {
+        for (width, height) in [(80, 24), (120, 40)] {
+            let mut terminal = Terminal::new(TestBackend::new(width, height)).unwrap();
+            terminal
+                .draw(|frame| help::render_help(frame, frame.area()))
+                .unwrap();
+            let text = screen(&terminal);
+            assert!(text.contains("follow selected process"));
+            assert!(text.contains("quit"));
+        }
+    }
+
+    #[test]
     fn kill_dialog_displays_pinned_pid_after_selection_moves() {
         let mut app = fixture();
         app.open_kill_menu();

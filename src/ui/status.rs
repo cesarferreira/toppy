@@ -15,14 +15,21 @@ pub fn render_status(frame: &mut Frame, area: Rect, app: &App) {
         "…".to_string()
     };
 
-    let mut spans = vec![
+    let mut spans = Vec::new();
+    if let Some(target) = app.followed_process {
+        spans.push(Span::styled(
+            format!("Following PID {}  ", target.pid),
+            theme::status_message_style(),
+        ));
+    }
+    spans.extend([
         Span::styled("CPU ", theme::status_label_style()),
         Span::styled(cpu, theme::utilization_style(app.cpu.global)),
         Span::styled(
             format!("  {}ms  ", app.refresh_ms),
             theme::status_label_style(),
         ),
-    ];
+    ]);
 
     if let Some(msg) = app.status_message() {
         spans.push(Span::styled(msg.to_owned(), theme::status_message_style()));
@@ -37,6 +44,7 @@ pub fn render_status(frame: &mut Frame, area: Rect, app: &App) {
 fn shortcut_spans() -> Vec<Span<'static>> {
     let mut spans = Vec::new();
     shortcut(&mut spans, "?", "", "", "help", theme::STATUS_KEY_HELP);
+    shortcut(&mut spans, "f", "", "", "follow", theme::STATUS_KEY_NAV);
     shortcut(&mut spans, "c", "", "", "cores", theme::CPU_BORDER);
     shortcut(&mut spans, "p", "", "", "command", theme::STATUS_KEY_NAV);
     shortcut(&mut spans, "+", "-", "", "refresh", theme::STATUS_KEY_NAV);
@@ -72,4 +80,41 @@ fn shortcut(
         spans.push(Span::styled(key3.to_string(), key_style));
     }
     spans.push(Span::styled(format!(" {action}"), sep_style));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::tests::fixture;
+    use ratatui::{Terminal, backend::TestBackend};
+
+    #[test]
+    fn active_follow_indicator_is_visible_even_on_a_narrow_status_bar() {
+        let mut app = fixture();
+        app.toggle_follow();
+        let mut terminal = Terminal::new(TestBackend::new(40, 1)).unwrap();
+        terminal
+            .draw(|frame| render_status(frame, frame.area(), &app))
+            .unwrap();
+        let text: String = terminal
+            .backend()
+            .buffer()
+            .content
+            .iter()
+            .map(|cell| cell.symbol())
+            .collect();
+        assert!(text.contains("Following PID 20"), "{text}");
+        app.toggle_follow();
+        terminal
+            .draw(|frame| render_status(frame, frame.area(), &app))
+            .unwrap();
+        let text: String = terminal
+            .backend()
+            .buffer()
+            .content
+            .iter()
+            .map(|cell| cell.symbol())
+            .collect();
+        assert!(!text.contains("Following"), "{text}");
+    }
 }

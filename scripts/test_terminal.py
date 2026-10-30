@@ -79,6 +79,18 @@ class TerminalTests(unittest.TestCase):
         self.read()
         self.assertIn(b"\x1b[?1049l", self.output)
 
+    def test_follow_key_toggles_visible_target_indicator(self):
+        proc = self.launch()
+        self.wait_for(b"help")
+        self.output.clear()
+        os.write(self.master, b"f")
+        self.wait_for(b"Following PID ")
+        self.output.clear()
+        os.write(self.master, b"f")
+        self.wait_for(b"follow off")
+        os.write(self.master, b"q")
+        self.assertEqual(proc.wait(timeout=5), 0)
+
     def test_setup_failure_restores_raw_mode(self):
         # /dev/full accepts the terminal setup call but fails writes after raw mode
         # was enabled. Keep stdin attached to the PTY so raw-mode changes are real.

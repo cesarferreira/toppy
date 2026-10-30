@@ -37,6 +37,7 @@ pub struct App {
     pub sort: SortColumn,
     pub sort_desc: bool,
     pub selected: usize,
+    pub followed_process: Option<ProcessIdentity>,
     pub scroll_offset: usize,
     pub filter: String,
     pub mode: ViewMode,
@@ -70,6 +71,7 @@ impl App {
             sort: SortColumn::Cpu,
             sort_desc: true,
             selected: 0,
+            followed_process: None,
             scroll_offset: 0,
             filter: String::new(),
             mode: ViewMode::Table,
@@ -129,7 +131,6 @@ impl App {
     }
 
     fn apply_snapshot(&mut self, snapshot: MetricsSnapshot) {
-        let selected = self.selected_process().map(ProcessRow::identity);
         // Do not carry expansion state across PID reuse.
         if !self.tree_expanded.is_empty() {
             let expanded_identities: HashSet<_> = self
@@ -149,15 +150,10 @@ impl App {
         self.memory = snapshot.memory;
         self.warmed_up = snapshot.warmed_up;
         self.processes = snapshot.processes;
-        self.rebuild_view_with_selection(selected);
+        self.rebuild_view();
     }
 
     pub fn rebuild_view(&mut self) {
-        let selected = self.selected_process().map(ProcessRow::identity);
-        self.rebuild_view_with_selection(selected);
-    }
-
-    fn rebuild_view_with_selection(&mut self, selected: Option<ProcessIdentity>) {
         sort_processes(
             &mut self.processes,
             self.sort,
@@ -171,7 +167,7 @@ impl App {
         } else {
             self.flat_tree.clear();
         }
-        if let Some(identity) = selected {
+        if let Some(identity) = self.followed_process {
             let position = if self.mode == ViewMode::Tree {
                 self.flat_tree.iter().position(|(pid, _, _)| {
                     self.tree
@@ -186,6 +182,12 @@ impl App {
             };
             if let Some(position) = position {
                 self.selected = position;
+            } else {
+                self.followed_process = None;
+                self.set_status_message(format!(
+                    "stopped following PID {} (no longer visible)",
+                    identity.pid
+                ));
             }
         }
         self.clamp_selection();
@@ -236,6 +238,7 @@ impl App {
     }
 
     pub fn move_selection(&mut self, delta: i32) {
+        self.stop_following();
         let len = self.list_len();
         if len == 0 {
             self.selected = 0;
@@ -258,11 +261,13 @@ impl App {
     }
 
     pub fn move_home(&mut self) {
+        self.stop_following();
         self.selected = 0;
         self.scroll_offset = 0;
     }
 
     pub fn move_end(&mut self) {
+        self.stop_following();
         let len = self.list_len();
         if len == 0 {
             return;
@@ -340,6 +345,7 @@ impl App {
     }
 
     pub fn toggle_tree(&mut self) {
+        self.stop_following();
         if self.mode == ViewMode::Tree {
             self.mode = ViewMode::Table;
             self.flat_tree.clear();
@@ -384,6 +390,20 @@ impl App {
     pub fn open_kill_menu(&mut self) {
         if let Some(process) = self.selected_process() {
             self.overlay = Some(Overlay::KillMenu(process.identity()));
+        }
+    }
+
+    pub fn toggle_follow(&mut self) {
+        if self.followed_process.is_some() {
+            self.stop_following();
+        } else if let Some(process) = self.selected_process() {
+            self.followed_process = Some(process.identity());
+        }
+    }
+
+    fn stop_following(&mut self) {
+        if self.followed_process.take().is_some() {
+            self.set_status_message("follow off");
         }
     }
 
