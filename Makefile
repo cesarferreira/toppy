@@ -27,9 +27,9 @@ install-release:
 clean:
 	cargo clean
 
-# Run tests
+# Run tests. Requires cargo-nextest: https://nexte.st/docs/installation/pre-built-binaries/
 test:
-	cargo test
+	cargo nextest run
 
 # End-to-end refresh and terminal restoration tests (Linux/macOS, Python 3)
 test-terminal: build-release
