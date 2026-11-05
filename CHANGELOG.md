@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Added
+- Toggle a disk and network IO panel with `i` on macOS and Linux
+
+### Changed
+- Run tests with cargo-nextest in `make test` and CI
+
 ## [0.5.0] - 2026-10-30
 
 ### Added

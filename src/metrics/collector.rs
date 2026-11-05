@@ -1,8 +1,12 @@
 use std::collections::HashMap;
 use std::ffi::{OsStr, OsString};
+use std::time::{Duration, Instant};
 
-use sysinfo::{ProcessRefreshKind, ProcessesToUpdate, System, UpdateKind};
+use sysinfo::{
+    DiskRefreshKind, Disks, Networks, ProcessRefreshKind, ProcessesToUpdate, System, UpdateKind,
+};
 
+use crate::metrics::io::{self, IoSnapshot};
 use crate::process::model::ProcessRow;
 
 #[derive(Debug, Clone)]
@@ -24,6 +28,7 @@ pub struct CpuSnapshot {
 pub struct MetricsSnapshot {
     pub cpu: CpuSnapshot,
     pub memory: MemorySnapshot,
+    pub io: IoSnapshot,
     pub processes: Vec<ProcessRow>,
     pub warmed_up: bool,
 }
@@ -68,6 +73,9 @@ impl CmdEntry {
 
 pub struct Collector {
     system: System,
+    disks: Disks,
+    networks: Networks,
+    io_sampled_at: Instant,
     tick_count: u32,
     cmd_cache: HashMap<u32, CmdEntry>,
 }
@@ -78,8 +86,13 @@ impl Collector {
         system.refresh_memory();
         system.refresh_cpu_usage();
         refresh_processes(&mut system);
+        // The first disk and network read is a baseline. The next refresh turns it into a rate.
+        let io_refresh = DiskRefreshKind::nothing().with_io_usage();
         Self {
             system,
+            disks: Disks::new_with_refreshed_list_specifics(io_refresh),
+            networks: Networks::new_with_refreshed_list(),
+            io_sampled_at: Instant::now(),
             tick_count: 0,
             cmd_cache: HashMap::new(),
         }
@@ -151,9 +164,64 @@ impl Collector {
                 swap_total: self.system.total_swap(),
                 swap_used: self.system.used_swap(),
             },
+            io: self.sample_io(),
             processes,
             warmed_up: self.tick_count >= 2,
         }
+    }
+
+    fn sample_io(&mut self) -> IoSnapshot {
+        let now = Instant::now();
+        let elapsed = now.saturating_duration_since(self.io_sampled_at);
+        self.disks
+            .refresh_specifics(false, DiskRefreshKind::nothing().with_io_usage());
+        self.networks.refresh(true);
+        self.io_sampled_at = now;
+
+        // A same-instant second read has no interval to divide by.
+        if elapsed < Duration::from_millis(1) {
+            return IoSnapshot::default();
+        }
+
+        let (disk_read, disk_write) = disk_deltas(&self.disks);
+        let (net_rx, net_tx) = io::sum_network_deltas(
+            self.networks
+                .iter()
+                .map(|(name, data)| (name.as_str(), data.received(), data.transmitted())),
+        );
+        IoSnapshot {
+            disk_read: io::bytes_per_second(disk_read, elapsed),
+            disk_write: io::bytes_per_second(disk_write, elapsed),
+            net_rx: io::bytes_per_second(net_rx, elapsed),
+            net_tx: io::bytes_per_second(net_tx, elapsed),
+            ready: true,
+        }
+    }
+}
+
+fn disk_deltas(disks: &Disks) -> (u64, u64) {
+    #[cfg(target_os = "macos")]
+    {
+        let ids = crate::metrics::macos::physical_ids_by_mount();
+        io::sum_disk_deltas(disks.list().iter().map(|disk| {
+            let usage = disk.usage();
+            let key = ids
+                .get(disk.mount_point())
+                .cloned()
+                .unwrap_or_else(|| disk.name().to_string_lossy().into_owned());
+            (key, usage.read_bytes, usage.written_bytes)
+        }))
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        io::sum_disk_deltas(disks.list().iter().map(|disk| {
+            let usage = disk.usage();
+            (
+                disk.name().to_os_string(),
+                usage.read_bytes,
+                usage.written_bytes,
+            )
+        }))
     }
 }
 

@@ -2,6 +2,11 @@ use ratatui::style::{Color, Modifier, Style};
 
 pub const CPU_BORDER: Color = Color::Cyan;
 pub const MEM_BORDER: Color = Color::Magenta;
+pub const IO_BORDER: Color = Color::Blue;
+pub const IO_READ: Color = Color::Rgb(120, 190, 255);
+pub const IO_WRITE: Color = Color::Rgb(255, 180, 90);
+pub const IO_RX: Color = Color::Rgb(120, 230, 170);
+pub const IO_TX: Color = Color::Rgb(190, 150, 255);
 pub const PROC_BORDER: Color = Color::White;
 pub const TREE_BORDER: Color = Color::Green;
 pub const STATUS_FG: Color = Color::DarkGray;

@@ -148,6 +148,10 @@ C1  [██████████░░░░░░░░] 51.1%
 
 RAM and swap usage with human-readable **KB / MB / GB** labels, used/total, and percentage bars.
 
+### Disk and network IO
+
+Press lowercase `i` to open a throughput panel under memory. It shows disk read and write, and network receive (↓) and transmit (↑), in bytes per second, on macOS and Linux. Loopback (`lo` on Linux, `lo0` on macOS) is omitted. A Linux device mounted in more than one place is counted once. On macOS, APFS volumes on the same disk are counted once, because each volume reports that whole disk. The panel stays hidden until you open it, and the choice is remembered across restarts.
+
 ### Process table
 
 Focused columns for the work you actually do in a monitor:
@@ -196,6 +200,7 @@ Metrics continue refreshing while you navigate or use overlays; keyboard input d
 | `Esc` | Clear filter / close overlay |
 | `p` | Toggle full command line / program name |
 | `c` | Toggle average / per-core CPU view |
+| `i` | Toggle disk and network IO |
 | `t` | Toggle process tree view |
 | `→` / `←` / `Enter` | Expand/collapse tree node |
 | `k` / `F9` | Kill selected process |
@@ -205,15 +210,16 @@ Metrics continue refreshing while you navigate or use overlays; keyboard input d
 
 In the kill menu: `1` = SIGTERM, `2` = SIGKILL.
 
-In the filter: `Enter` keeps the filter and closes input; `Esc` clears it and closes input. Outside overlays, `Esc` clears the active filter. Uppercase `P` / `C` sort; lowercase `p` / `c` change display preferences.
+In the filter: `Enter` keeps the filter and closes input; `Esc` clears it and closes input. Outside overlays, `Esc` clears the active filter. Uppercase `P` / `C` sort; lowercase `p` / `c` / `i` change display preferences.
 
 ## Saved preferences
 
-CPU expansion and command display are saved to `$XDG_CONFIG_HOME/toppy/config.toml`, or `~/.config/toppy/config.toml` when `XDG_CONFIG_HOME` is unset. No file needs to be created manually.
+CPU expansion, command display, and the IO panel are saved to `$XDG_CONFIG_HOME/toppy/config.toml`, or `~/.config/toppy/config.toml` when `XDG_CONFIG_HOME` is unset. No file needs to be created manually.
 
 ```toml
 cpu_cores_expanded = false
 show_full_command = true
+show_io = false
 ```
 
 ## CLI options
@@ -237,7 +243,7 @@ make run ARGS="--refresh-rate 500"
 make check        # cargo check + clippy
 make fmt          # format
 make lint           # fmt check + clippy
-make test
+make test         # cargo nextest run; requires cargo-nextest
 make test-terminal # PTY regression tests; requires Python 3
 make measure       # live collection, synthetic views, startup, idle CPU/RSS
 make clean

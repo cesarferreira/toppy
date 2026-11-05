@@ -5,7 +5,10 @@ use sysinfo::Signal;
 
 use crate::{
     config::Config,
-    metrics::collector::{Collector, CpuSnapshot, MemorySnapshot, MetricsSnapshot},
+    metrics::{
+        collector::{Collector, CpuSnapshot, MemorySnapshot, MetricsSnapshot},
+        io::IoSnapshot,
+    },
     process::{
         model::{ProcessIdentity, ProcessRow, SortColumn, filter_indices, sort_processes},
         tree::ProcessTree,
@@ -33,6 +36,7 @@ pub struct App {
     pub flat_tree: Vec<(u32, usize, bool)>,
     pub cpu: CpuSnapshot,
     pub memory: MemorySnapshot,
+    pub io: IoSnapshot,
     pub warmed_up: bool,
     pub sort: SortColumn,
     pub sort_desc: bool,
@@ -46,6 +50,7 @@ pub struct App {
     pub visible_rows: u16,
     pub cpu_cores_expanded: bool,
     pub show_full_command: bool,
+    pub show_io: bool,
     status_message: Option<String>,
     status_message_until: Option<Instant>,
     pub should_quit: bool,
@@ -67,6 +72,7 @@ impl App {
             flat_tree: Vec::new(),
             cpu: snapshot.cpu,
             memory: snapshot.memory,
+            io: snapshot.io,
             warmed_up: snapshot.warmed_up,
             sort: SortColumn::Cpu,
             sort_desc: true,
@@ -80,6 +86,7 @@ impl App {
             visible_rows: 10,
             cpu_cores_expanded: settings.cpu_cores_expanded,
             show_full_command: settings.show_full_command,
+            show_io: settings.show_io,
             status_message: None,
             status_message_until: None,
             should_quit: false,
@@ -148,6 +155,7 @@ impl App {
         }
         self.cpu = snapshot.cpu;
         self.memory = snapshot.memory;
+        self.io = snapshot.io;
         self.warmed_up = snapshot.warmed_up;
         self.processes = snapshot.processes;
         self.rebuild_view();
@@ -368,6 +376,16 @@ impl App {
         });
     }
 
+    pub fn toggle_io(&mut self) {
+        self.show_io = !self.show_io;
+        self.save_config();
+        self.set_status_message(if self.show_io {
+            "showing disk and network IO"
+        } else {
+            "hiding disk and network IO"
+        });
+    }
+
     pub fn toggle_full_command(&mut self) {
         self.show_full_command = !self.show_full_command;
         self.save_config();
@@ -383,6 +401,7 @@ impl App {
         let _ = Config {
             cpu_cores_expanded: self.cpu_cores_expanded,
             show_full_command: self.show_full_command,
+            show_io: self.show_io,
         }
         .save();
     }

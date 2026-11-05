@@ -36,6 +36,7 @@ pub(crate) fn fixture() -> App {
             swap_total: 0,
             swap_used: 0,
         },
+        io: IoSnapshot::default(),
         warmed_up: true,
         sort: SortColumn::Cpu,
         sort_desc: true,
@@ -49,6 +50,7 @@ pub(crate) fn fixture() -> App {
         visible_rows: 10,
         cpu_cores_expanded: false,
         show_full_command: true,
+        show_io: false,
         status_message: None,
         status_message_until: None,
         should_quit: false,
@@ -74,6 +76,7 @@ fn follow_refresh_keeps_selected_process_after_cpu_reordering() {
     app.apply_snapshot(MetricsSnapshot {
         cpu: app.cpu.clone(),
         memory: app.memory.clone(),
+        io: app.io,
         warmed_up: true,
         processes: vec![
             row(10, 99.0, None),
@@ -96,6 +99,7 @@ fn reorder_snapshot(app: &App) -> MetricsSnapshot {
     MetricsSnapshot {
         cpu: app.cpu.clone(),
         memory: app.memory.clone(),
+        io: app.io,
         warmed_up: true,
         processes: vec![
             row(10, 99.0, None),
@@ -354,6 +358,7 @@ fn kill_target_stays_pinned_when_list_changes() {
     app.apply_snapshot(MetricsSnapshot {
         cpu: app.cpu.clone(),
         memory: app.memory.clone(),
+        io: app.io,
         warmed_up: true,
         processes: vec![row(10, 99.0, None)],
     });
@@ -374,6 +379,7 @@ fn empty_snapshot_resets_selection_without_losing_kill_target() {
     app.apply_snapshot(MetricsSnapshot {
         cpu: app.cpu.clone(),
         memory: app.memory.clone(),
+        io: app.io,
         warmed_up: true,
         processes: vec![],
     });
@@ -409,6 +415,7 @@ fn refresh_preserves_expansion_only_for_same_live_identities() {
     app.apply_snapshot(MetricsSnapshot {
         cpu: app.cpu.clone(),
         memory: app.memory.clone(),
+        io: app.io,
         warmed_up: true,
         processes: vec![reused, row(20, 90.0, Some(10))],
     });
@@ -426,6 +433,7 @@ fn measure_expanded_snapshot_refresh() {
     app.apply_snapshot(MetricsSnapshot {
         cpu: app.cpu.clone(),
         memory: app.memory.clone(),
+        io: app.io,
         warmed_up: true,
         processes: processes.clone(),
     });
@@ -437,6 +445,7 @@ fn measure_expanded_snapshot_refresh() {
         let snapshot = MetricsSnapshot {
             cpu: app.cpu.clone(),
             memory: app.memory.clone(),
+            io: app.io,
             warmed_up: true,
             processes: processes.clone(),
         };

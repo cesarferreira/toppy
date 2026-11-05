@@ -45,6 +45,7 @@ fn handle_key(app: &mut App, key: KeyEvent) -> bool {
         KeyCode::Char('?') | KeyCode::F(1) => app.toggle_help(),
         KeyCode::Char('t') => app.toggle_tree(),
         KeyCode::Char('c') => app.toggle_cpu_cores(),
+        KeyCode::Char('i') => app.toggle_io(),
         KeyCode::Char('p') => app.toggle_full_command(),
         KeyCode::Char('f') => app.toggle_follow(),
         KeyCode::Char('r') => app.force_refresh(),
@@ -168,5 +169,43 @@ mod tests {
         press(&mut app, KeyCode::Char('f'));
         assert_eq!(app.filter, "f");
         assert_eq!(app.followed_process, None);
+    }
+
+    #[test]
+    fn io_key_toggles_the_section_and_saves_it() {
+        let dir = std::env::temp_dir().join(format!(
+            "toppy-io-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&dir).unwrap();
+        crate::config::set_test_config_dir(Some(dir.clone()));
+
+        let mut app = fixture();
+        press(&mut app, KeyCode::Char('i'));
+        assert!(app.show_io);
+        assert_eq!(app.status_message(), Some("showing disk and network IO"));
+        let saved = std::fs::read_to_string(dir.join("config.toml")).unwrap();
+        assert!(saved.contains("show_io = true"), "{saved}");
+
+        press(&mut app, KeyCode::Char('i'));
+        assert!(!app.show_io);
+        let saved = std::fs::read_to_string(dir.join("config.toml")).unwrap();
+        assert!(saved.contains("show_io = false"), "{saved}");
+
+        crate::config::set_test_config_dir(None);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn io_key_in_filter_is_text() {
+        let mut app = fixture();
+        press(&mut app, KeyCode::Char('/'));
+        press(&mut app, KeyCode::Char('i'));
+        assert_eq!(app.filter, "i");
+        assert!(!app.show_io);
     }
 }

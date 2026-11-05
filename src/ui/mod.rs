@@ -1,5 +1,6 @@
 pub mod cpu;
 pub mod help;
+pub mod io;
 pub mod layout;
 pub mod memory;
 pub mod processes;
@@ -14,7 +15,12 @@ use ratatui::Frame;
 use crate::app::{App, Overlay, ViewMode};
 
 pub fn render(frame: &mut Frame, app: &mut App) {
-    let root = layout::split_root(frame, app.cpu.per_core.len(), app.cpu_cores_expanded);
+    let root = layout::split_root(
+        frame,
+        app.cpu.per_core.len(),
+        app.cpu_cores_expanded,
+        app.show_io,
+    );
     app.visible_rows = root
         .main
         .height
@@ -28,6 +34,9 @@ pub fn render(frame: &mut Frame, app: &mut App) {
         app.cpu_cores_expanded,
     );
     memory::render_memory(frame, root.memory, &app.memory);
+    if app.show_io {
+        io::render_io(frame, root.io, &app.io);
+    }
 
     match app.mode {
         ViewMode::Tree => tree::render_tree(frame, root.main, app),
@@ -86,6 +95,7 @@ mod tests {
                 .unwrap();
             let text = screen(&terminal);
             assert!(text.contains("follow selected process"));
+            assert!(text.contains("toggle disk and network IO"));
             assert!(text.contains("quit"));
         }
     }
@@ -107,6 +117,9 @@ mod tests {
             let mut terminal = Terminal::new(TestBackend::new(width, height)).unwrap();
             for overlay in [None, Some(Overlay::Help), Some(Overlay::FilterInput)] {
                 app.overlay = overlay;
+                app.show_io = false;
+                terminal.draw(|frame| render(frame, &mut app)).unwrap();
+                app.show_io = true;
                 terminal.draw(|frame| render(frame, &mut app)).unwrap();
             }
         }
@@ -122,6 +135,36 @@ mod tests {
         app.toggle_tree();
         terminal.draw(|frame| render(frame, &mut app)).unwrap();
         assert_eq!(app.visible_rows, 30);
+        app.show_io = true;
+        terminal.draw(|frame| render(frame, &mut app)).unwrap();
+        // The IO panel takes the same 4 rows as memory.
+        assert_eq!(app.visible_rows, 26);
+    }
+
+    #[test]
+    fn io_section_appears_only_while_toggled_on() {
+        let mut app = fixture();
+        app.io = crate::metrics::io::IoSnapshot {
+            disk_read: 12 * 1024 * 1024,
+            disk_write: 0,
+            net_rx: 1024,
+            net_tx: 2048,
+            ready: true,
+        };
+        let mut terminal = Terminal::new(TestBackend::new(120, 40)).unwrap();
+        terminal.draw(|frame| render(frame, &mut app)).unwrap();
+        assert!(
+            !screen(&terminal).contains("12.0 MB/s"),
+            "IO panel is hidden by default"
+        );
+
+        app.show_io = true;
+        terminal.draw(|frame| render(frame, &mut app)).unwrap();
+        let text = screen(&terminal);
+        assert!(text.contains("12.0 MB/s"), "{text}");
+        assert!(text.contains("1.0 KB/s"), "{text}");
+        assert!(text.contains("2.0 KB/s"), "{text}");
+        assert!(text.contains("0 B/s"), "{text}");
     }
 
     fn selected_process_panel(
