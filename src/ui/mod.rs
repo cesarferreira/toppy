@@ -96,6 +96,7 @@ mod tests {
             let text = screen(&terminal);
             assert!(text.contains("follow selected process"));
             assert!(text.contains("toggle disk and network IO"));
+            assert!(text.contains("toggle PID column"));
             assert!(text.contains("quit"));
         }
     }
@@ -165,6 +166,40 @@ mod tests {
         assert!(text.contains("1.0 KB/s"), "{text}");
         assert!(text.contains("2.0 KB/s"), "{text}");
         assert!(text.contains("0 B/s"), "{text}");
+    }
+
+    #[test]
+    fn pid_column_disappears_in_table_and_tree_without_hiding_commands() {
+        fn rows(terminal: &Terminal<TestBackend>) -> Vec<String> {
+            terminal
+                .backend()
+                .buffer()
+                .content
+                .chunks(80)
+                .map(|row| row.iter().map(|cell| cell.symbol()).collect())
+                .collect()
+        }
+
+        for mode in [ViewMode::Table, ViewMode::Tree] {
+            let mut app = fixture();
+            if mode == ViewMode::Tree {
+                app.toggle_tree();
+                app.toggle_tree_node();
+            }
+            let mut terminal = Terminal::new(TestBackend::new(80, 24)).unwrap();
+            terminal.draw(|frame| render(frame, &mut app)).unwrap();
+            assert!(rows(&terminal).iter().any(|row| row.contains("20")));
+
+            app.show_pid = false;
+            terminal.draw(|frame| render(frame, &mut app)).unwrap();
+            let rows = rows(&terminal);
+            let text = rows.join("\n");
+            assert!(!text.contains("      20 "), "{mode:?}: {text}");
+            assert!(text.contains("worker-20"), "{mode:?}: {text}");
+            if mode == ViewMode::Table {
+                assert!(!text.contains("PID"), "{text}");
+            }
+        }
     }
 
     fn selected_process_panel(

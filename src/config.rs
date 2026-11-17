@@ -20,6 +20,7 @@ pub struct Config {
     pub cpu_cores_expanded: bool,
     pub show_full_command: bool,
     pub show_io: bool,
+    pub show_pid: bool,
 }
 
 impl Default for Config {
@@ -28,6 +29,7 @@ impl Default for Config {
             cpu_cores_expanded: false,
             show_full_command: true,
             show_io: false,
+            show_pid: true,
         }
     }
 }
@@ -57,8 +59,8 @@ impl Config {
         let mut file = fs::File::create(path)?;
         write!(
             file,
-            "cpu_cores_expanded = {}\nshow_full_command = {}\nshow_io = {}\n",
-            self.cpu_cores_expanded, self.show_full_command, self.show_io
+            "cpu_cores_expanded = {}\nshow_full_command = {}\nshow_io = {}\nshow_pid = {}\n",
+            self.cpu_cores_expanded, self.show_full_command, self.show_io, self.show_pid
         )?;
         Ok(())
     }
@@ -100,6 +102,7 @@ fn parse(contents: &str) -> Option<Config> {
             "cpu_cores_expanded" => &mut config.cpu_cores_expanded,
             "show_full_command" => &mut config.show_full_command,
             "show_io" => &mut config.show_io,
+            "show_pid" => &mut config.show_pid,
             _ => continue,
         };
 

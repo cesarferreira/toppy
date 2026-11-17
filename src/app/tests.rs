@@ -51,6 +51,7 @@ pub(crate) fn fixture() -> App {
         cpu_cores_expanded: false,
         show_full_command: true,
         show_io: false,
+        show_pid: true,
         status_message: None,
         status_message_until: None,
         should_quit: false,

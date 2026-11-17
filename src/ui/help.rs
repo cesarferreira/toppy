@@ -51,6 +51,7 @@ pub fn render_help(frame: &mut Frame, area: Rect) {
     lines.push(row("t", "toggle tree view", theme::STATUS_KEY_TREE));
     lines.push(row("c", "toggle CPU per-core view", theme::CPU_BORDER));
     lines.push(row("i", "toggle disk and network IO", theme::IO_BORDER));
+    lines.push(row("d", "toggle PID column", theme::STATUS_KEY_NAV));
     lines.push(row(
         "p",
         "toggle full command / name",
@@ -114,6 +115,7 @@ pub fn render_help(frame: &mut Frame, area: Rect) {
             row("→ ← Ret", "expand / collapse tree", theme::STATUS_KEY_TREE),
             row("c", "toggle CPU per-core view", theme::CPU_BORDER),
             row("i", "toggle disk and network IO", theme::IO_BORDER),
+            row("d", "toggle PID column", theme::STATUS_KEY_NAV),
             row("p", "toggle full command / name", theme::STATUS_KEY_NAV),
             row(
                 "P C M T",

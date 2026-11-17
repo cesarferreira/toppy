@@ -201,6 +201,7 @@ Metrics continue refreshing while you navigate or use overlays; keyboard input d
 | `p` | Toggle full command line / program name |
 | `c` | Toggle average / per-core CPU view |
 | `i` | Toggle disk and network IO |
+| `d` | Toggle PID column in process table and tree |
 | `t` | Toggle process tree view |
 | `→` / `←` / `Enter` | Expand/collapse tree node |
 | `k` / `F9` | Kill selected process |
@@ -210,16 +211,17 @@ Metrics continue refreshing while you navigate or use overlays; keyboard input d
 
 In the kill menu: `1` = SIGTERM, `2` = SIGKILL.
 
-In the filter: `Enter` keeps the filter and closes input; `Esc` clears it and closes input. Outside overlays, `Esc` clears the active filter. Uppercase `P` / `C` sort; lowercase `p` / `c` / `i` change display preferences.
+In the filter: `Enter` keeps the filter and closes input; `Esc` clears it and closes input. Outside overlays, `Esc` clears the active filter. Uppercase `P` / `C` sort; lowercase `p` / `c` / `i` / `d` change display preferences.
 
 ## Saved preferences
 
-CPU expansion, command display, and the IO panel are saved to `$XDG_CONFIG_HOME/toppy/config.toml`, or `~/.config/toppy/config.toml` when `XDG_CONFIG_HOME` is unset. No file needs to be created manually.
+CPU expansion, command display, the IO panel, and PID visibility are saved to `$XDG_CONFIG_HOME/toppy/config.toml`, or `~/.config/toppy/config.toml` when `XDG_CONFIG_HOME` is unset. No file needs to be created manually.
 
 ```toml
 cpu_cores_expanded = false
 show_full_command = true
 show_io = false
+show_pid = true
 ```
 
 ## CLI options

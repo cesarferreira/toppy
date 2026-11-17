@@ -51,6 +51,7 @@ pub struct App {
     pub cpu_cores_expanded: bool,
     pub show_full_command: bool,
     pub show_io: bool,
+    pub show_pid: bool,
     status_message: Option<String>,
     status_message_until: Option<Instant>,
     pub should_quit: bool,
@@ -87,6 +88,7 @@ impl App {
             cpu_cores_expanded: settings.cpu_cores_expanded,
             show_full_command: settings.show_full_command,
             show_io: settings.show_io,
+            show_pid: settings.show_pid,
             status_message: None,
             status_message_until: None,
             should_quit: false,
@@ -386,6 +388,16 @@ impl App {
         });
     }
 
+    pub fn toggle_pid(&mut self) {
+        self.show_pid = !self.show_pid;
+        self.save_config();
+        self.set_status_message(if self.show_pid {
+            "showing PID"
+        } else {
+            "hiding PID"
+        });
+    }
+
     pub fn toggle_full_command(&mut self) {
         self.show_full_command = !self.show_full_command;
         self.save_config();
@@ -402,6 +414,7 @@ impl App {
             cpu_cores_expanded: self.cpu_cores_expanded,
             show_full_command: self.show_full_command,
             show_io: self.show_io,
+            show_pid: self.show_pid,
         }
         .save();
     }

@@ -51,7 +51,7 @@ pub fn render_tree(frame: &mut Frame, area: Rect, app: &App) {
             branch,
             pos == app.selected,
             colors,
-            app.show_full_command,
+            app,
             inner.width,
         ));
     }
@@ -74,12 +74,16 @@ fn render_tree_row(
     branch: &str,
     selected: bool,
     colors: theme::RowColors,
-    full_command: bool,
+    app: &App,
     row_width: u16,
 ) -> Line<'static> {
     let indent = "  ".repeat(depth);
     let mem_text = format::format_bytes(proc.mem_bytes);
-    let head = format!("{indent}{branch}{:>7} ", proc.pid);
+    let head = if app.show_pid {
+        format!("{indent}{branch}{:>7} ", proc.pid)
+    } else {
+        format!("{indent}{branch}")
+    };
     let cpu = format!("{:>5.1}% ", proc.cpu);
     let mem = format!("{:>8} ", mem_text);
     // head contains the tree indent which is ASCII spaces, plus a branch glyph
@@ -97,7 +101,12 @@ fn render_tree_row(
         Span::styled(cpu, Style::default().fg(colors.cpu)),
         Span::styled(mem, Style::default().fg(colors.mem)),
     ];
-    spans.extend(command_spans(proc, full_command, cmd_width, colors));
+    spans.extend(command_spans(
+        proc,
+        app.show_full_command,
+        cmd_width,
+        colors,
+    ));
 
     process_line(spans, selected)
 }

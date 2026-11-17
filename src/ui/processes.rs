@@ -28,12 +28,16 @@ pub fn render_processes(frame: &mut Frame, area: Rect, app: &App) {
         return;
     }
 
-    let header = Line::from(vec![
-        Span::styled("  PID", theme::header_style()),
+    let mut header_spans = Vec::new();
+    if app.show_pid {
+        header_spans.push(Span::styled("  PID", theme::header_style()));
+    }
+    header_spans.extend([
         Span::styled("    CPU%", theme::header_style()),
         Span::styled("      MEM", theme::header_style()),
         Span::styled("  COMMAND", theme::header_style()),
     ]);
+    let header = Line::from(header_spans);
 
     let header_area = Rect { height: 1, ..inner };
     frame.render_widget(Paragraph::new(header), header_area);
@@ -62,6 +66,7 @@ pub fn render_processes(frame: &mut Frame, area: Rect, app: &App) {
             pos == app.selected,
             colors,
             app.show_full_command,
+            app.show_pid,
             list_area.width,
         ));
     }
@@ -93,20 +98,28 @@ fn render_row(
     selected: bool,
     colors: theme::RowColors,
     full_command: bool,
+    show_pid: bool,
     row_width: u16,
 ) -> Line<'static> {
     let mem_text = format::format_bytes(proc.mem_bytes);
-    let pid = format!("{:>7} ", proc.pid);
+    let pid = if show_pid {
+        format!("{:>7} ", proc.pid)
+    } else {
+        String::new()
+    };
     let cpu = format!("{:>6.1}% ", proc.cpu);
     let mem = format!("{:>8} ", mem_text);
     let prefix_len = pid.len() + cpu.len() + mem.len();
     let cmd_width = row_width.saturating_sub(prefix_len as u16) as usize;
 
-    let mut spans = vec![
-        Span::styled(pid, Style::default().fg(colors.base)),
+    let mut spans = Vec::new();
+    if show_pid {
+        spans.push(Span::styled(pid, Style::default().fg(colors.base)));
+    }
+    spans.extend([
         Span::styled(cpu, Style::default().fg(colors.cpu)),
         Span::styled(mem, Style::default().fg(colors.mem)),
-    ];
+    ]);
     spans.extend(command_spans(proc, full_command, cmd_width, colors));
 
     process_line(spans, selected)

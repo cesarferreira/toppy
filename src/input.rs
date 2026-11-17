@@ -46,6 +46,7 @@ fn handle_key(app: &mut App, key: KeyEvent) -> bool {
         KeyCode::Char('t') => app.toggle_tree(),
         KeyCode::Char('c') => app.toggle_cpu_cores(),
         KeyCode::Char('i') => app.toggle_io(),
+        KeyCode::Char('d') => app.toggle_pid(),
         KeyCode::Char('p') => app.toggle_full_command(),
         KeyCode::Char('f') => app.toggle_follow(),
         KeyCode::Char('r') => app.force_refresh(),
@@ -207,5 +208,24 @@ mod tests {
         press(&mut app, KeyCode::Char('i'));
         assert_eq!(app.filter, "i");
         assert!(!app.show_io);
+    }
+
+    #[test]
+    fn pid_key_toggles_visibility_and_saves_preference() {
+        let dir = std::env::temp_dir().join(format!("toppy-pid-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        crate::config::set_test_config_dir(Some(dir.clone()));
+
+        let mut app = fixture();
+        assert!(app.show_pid);
+        press(&mut app, KeyCode::Char('d'));
+        assert!(!app.show_pid);
+        assert!(!crate::config::Config::load().show_pid);
+        press(&mut app, KeyCode::Char('d'));
+        assert!(app.show_pid);
+        assert!(crate::config::Config::load().show_pid);
+
+        crate::config::set_test_config_dir(None);
+        let _ = std::fs::remove_dir_all(dir);
     }
 }
