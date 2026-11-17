@@ -42,9 +42,9 @@ const PROC_HIGH: (u8, u8, u8) = (0xd4, 0x54, 0x54);
 /// Foreground colors for one process row.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct RowColors {
-    /// PID and command text.
+    /// PID text.
     pub base: Color,
-    /// CPU% and program name.
+    /// CPU% text.
     pub cpu: Color,
     pub mem: Color,
 }

@@ -101,12 +101,7 @@ fn render_tree_row(
         Span::styled(cpu, Style::default().fg(colors.cpu)),
         Span::styled(mem, Style::default().fg(colors.mem)),
     ];
-    spans.extend(command_spans(
-        proc,
-        app.show_full_command,
-        cmd_width,
-        colors,
-    ));
+    spans.extend(command_spans(proc, app.show_full_command, cmd_width));
 
     process_line(spans, selected)
 }

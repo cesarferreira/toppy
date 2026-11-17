@@ -325,11 +325,12 @@ mod tests {
                     assert_eq!(buffer[(pid_x, y)].fg, Color::Rgb(204, 204, 204));
                     for label in ["50.0%", "4.0 KB", "worker-"] {
                         let x = text.find(label).unwrap() as u16;
-                        assert_eq!(
-                            buffer[(x, y)].fg,
-                            Color::Rgb(220, 209, 121),
-                            "{mode:?} row={index} {label}"
-                        );
+                        let expected = if label == "worker-" {
+                            Color::White
+                        } else {
+                            Color::Rgb(220, 209, 121)
+                        };
+                        assert_eq!(buffer[(x, y)].fg, expected, "{mode:?} row={index} {label}");
                     }
                 }
             }

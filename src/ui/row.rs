@@ -1,13 +1,9 @@
 use ratatui::{
-    style::{Modifier, Style},
+    style::{Color, Modifier, Style},
     text::{Line, Span},
 };
 
-use crate::{
-    process::model::ProcessRow,
-    theme::{self, RowColors},
-    ui::text::truncate_to_width,
-};
+use crate::{process::model::ProcessRow, theme, ui::text::truncate_to_width};
 
 /// Give selected rows a consistent high-contrast style across the full panel width.
 pub fn process_line(spans: Vec<Span<'static>>, selected: bool) -> Line<'static> {
@@ -34,45 +30,15 @@ pub fn mem_pct(proc: &ProcessRow, total_mem: u64) -> f32 {
     }
 }
 
-/// COMMAND column spans. The program name gets the CPU color; in full-command
-/// mode only the basename of argv[0] does, and the path and args keep the base color.
-pub fn command_spans(
-    proc: &ProcessRow,
-    full_command: bool,
-    width: usize,
-    colors: RowColors,
-) -> Vec<Span<'static>> {
+/// COMMAND column text is white in both display modes.
+pub fn command_spans(proc: &ProcessRow, full_command: bool, width: usize) -> Vec<Span<'static>> {
     let text = truncate_to_width(proc.command_label(full_command), width.max(1));
-    if !full_command {
-        return vec![Span::styled(text, Style::default().fg(colors.cpu))];
-    }
-
-    let argv0_end = text.find(' ').unwrap_or(text.len());
-    let name_start = text[..argv0_end].rfind('/').map_or(0, |i| i + 1);
-    let mut spans = Vec::with_capacity(3);
-    if name_start > 0 {
-        spans.push(Span::styled(
-            text[..name_start].to_string(),
-            Style::default().fg(colors.base),
-        ));
-    }
-    spans.push(Span::styled(
-        text[name_start..argv0_end].to_string(),
-        Style::default().fg(colors.cpu),
-    ));
-    if argv0_end < text.len() {
-        spans.push(Span::styled(
-            text[argv0_end..].to_string(),
-            Style::default().fg(colors.base),
-        ));
-    }
-    spans
+    vec![Span::styled(text, Style::default().fg(Color::White))]
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ratatui::style::Color;
 
     fn proc(cmd: &str, name: &str) -> ProcessRow {
         ProcessRow {
@@ -88,12 +54,6 @@ mod tests {
         }
     }
 
-    const COLORS: RowColors = RowColors {
-        base: Color::White,
-        cpu: Color::Green,
-        mem: Color::Blue,
-    };
-
     fn parts(spans: &[Span]) -> Vec<(String, Color)> {
         spans
             .iter()
@@ -102,33 +62,29 @@ mod tests {
     }
 
     #[test]
-    fn full_command_highlights_basename_only() {
+    fn full_command_is_white() {
         let p = proc("/usr/bin/ffmpeg -v error", "ffmpeg");
         assert_eq!(
-            parts(&command_spans(&p, true, 80, COLORS)),
-            vec![
-                ("/usr/bin/".into(), Color::White),
-                ("ffmpeg".into(), Color::Green),
-                (" -v error".into(), Color::White),
-            ]
+            parts(&command_spans(&p, true, 80)),
+            vec![("/usr/bin/ffmpeg -v error".into(), Color::White)]
         );
     }
 
     #[test]
-    fn bare_command_is_all_program_color() {
+    fn bare_command_is_white() {
         let p = proc("toppy", "toppy");
         assert_eq!(
-            parts(&command_spans(&p, true, 80, COLORS)),
-            vec![("toppy".into(), Color::Green)]
+            parts(&command_spans(&p, true, 80)),
+            vec![("toppy".into(), Color::White)]
         );
     }
 
     #[test]
-    fn name_mode_uses_program_color() {
+    fn name_mode_is_white() {
         let p = proc("/usr/bin/ffmpeg -v error", "ffmpeg");
         assert_eq!(
-            parts(&command_spans(&p, false, 80, COLORS)),
-            vec![("ffmpeg".into(), Color::Green)]
+            parts(&command_spans(&p, false, 80)),
+            vec![("ffmpeg".into(), Color::White)]
         );
     }
 }
