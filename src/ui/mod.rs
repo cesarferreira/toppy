@@ -284,6 +284,45 @@ mod tests {
     }
 
     #[test]
+    fn treemap_centers_text_in_large_tiles() {
+        let mut app = fixture();
+        app.filter = "worker-20".into();
+        app.rebuild_view();
+        app.toggle_treemap();
+        let mut terminal = Terminal::new(TestBackend::new(100, 40)).unwrap();
+        terminal.draw(|frame| render(frame, &mut app)).unwrap();
+        let (_, tile) = app.treemap_tiles[0];
+        let buffer = terminal.backend().buffer();
+        let find = |label: &str| {
+            (tile.y..tile.bottom())
+                .find_map(|y| {
+                    let row: String = (0..buffer.area.width)
+                        .map(|x| buffer[(x, y)].symbol())
+                        .collect();
+                    row.find(label)
+                        .map(|x| (row[..x].chars().count() as u16, y))
+                })
+                .unwrap()
+        };
+        let (name_x, name_y) = find("worker-20");
+        let (_, cpu_y) = find("90.0% CPU");
+        let middle_y = tile.y + tile.height / 2;
+        assert!(
+            name_y + 4 >= middle_y && name_y < middle_y,
+            "name at row {name_y}, tile {tile:?}"
+        );
+        assert!(
+            cpu_y >= middle_y && cpu_y <= middle_y + 4,
+            "cpu at row {cpu_y}, tile {tile:?}"
+        );
+        let middle_x = tile.x + tile.width / 2;
+        assert!(
+            name_x + 12 > middle_x && name_x < middle_x,
+            "name at col {name_x}, tile {tile:?}"
+        );
+    }
+
+    #[test]
     fn treemap_arrows_move_between_tiles_and_m_returns_to_table() {
         use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
         let press = |app: &mut App, code| {

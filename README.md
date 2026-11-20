@@ -182,7 +182,7 @@ Press lowercase `m` to switch the process panel to a treemap. Each process is a 
 - **Red** (`▼`): CPU went down. Larger decreases are brighter.
 - **Blue** (`■`): CPU changed by less than 1.5 percentage points.
 
-Each tile shows the program name, PID, memory, CPU%, and the change. Small tiles drop details that do not fit. Use the arrow keys to move to the nearest tile in that direction. The selected tile has an inverted title bar and always stays visible. Filter, follow, and kill work the same as in the table. Press `m` again to return to the table, or `t` for the tree.
+Each tile shows the program name, PID, memory, CPU%, and the change, centered in the tile. Small tiles drop details that do not fit. Use the arrow keys to move to the nearest tile in that direction. The selected tile has an inverted title bar and always stays visible. Filter, follow, and kill work the same as in the table. Press `m` again to return to the table, or `t` for the tree.
 
 ### Kill and filter
 

@@ -365,34 +365,47 @@ fn draw_tile(buffer: &mut Buffer, rect: Rect, process: &ProcessRow, app: &App, s
         label.insert_str(0, "▶ ");
     }
     let title = wrap(&label, width, title_rows);
-    if selected {
-        let bar_bottom = content.y + title.len().max(1) as u16;
+
+    // Center the text block in the tile. Add a blank line between the name
+    // and the numbers when the tile has room for it.
+    let mut block_height = title.len() + footer.len();
+    let spacer = usize::from(!title.is_empty() && usize::from(content.height) >= block_height + 3);
+    block_height += spacer;
+    let top = if block_height >= usize::from(content.height) {
+        content.y
+    } else {
+        (body.y + (body.height - block_height as u16) / 2).max(content.y)
+    };
+    let centered_x = |len: usize| content.x + (content.width - len.min(width) as u16) / 2;
+
+    if selected && !title.is_empty() {
         let bar = Rect {
-            height: bar_bottom - body.y,
+            y: top,
+            height: title.len() as u16,
             ..body
         };
         buffer.set_style(bar, title_style);
     }
     for (row, line) in title.iter().enumerate() {
-        buffer.set_stringn(content.x, content.y + row as u16, line, width, title_style);
+        let x = centered_x(line.chars().count());
+        buffer.set_stringn(x, top + row as u16, line, width, title_style);
     }
 
-    let footer_top = content.bottom() - footer.len() as u16;
+    let footer_top = top + (title.len() + spacer) as u16;
     for (i, (left, right)) in footer.iter().enumerate() {
         let y = footer_top + i as u16;
-        buffer.set_stringn(content.x, y, left, width, meta_style);
         let right_len = right.chars().count();
+        let gap = if right.is_empty() { 0 } else { USAGE_GAP };
+        let x = centered_x(left.chars().count() + gap + right_len);
+        let (after_left, _) = buffer.set_stringn(x, y, left, width, meta_style);
         if !right.is_empty() {
-            buffer.set_stringn(
-                content.right() - right_len as u16,
-                y,
-                right,
-                right_len,
-                value_style,
-            );
+            buffer.set_stringn(after_left + gap as u16, y, right, right_len, value_style);
         }
     }
 }
+
+/// Spaces between CPU usage and the trend on the same line.
+const USAGE_GAP: usize = 2;
 
 /// `#PID · memory`, dropping parts that do not fit in `width`.
 fn id_line(process: &ProcessRow, show_pid: bool, width: usize) -> String {
@@ -406,7 +419,7 @@ fn id_line(process: &ProcessRow, show_pid: bool, width: usize) -> String {
     first_fitting(candidates, width)
 }
 
-/// CPU usage on the left and the trend on the right, shortened to fit `width`.
+/// CPU usage and the trend, shortened to fit `width`.
 fn usage_line(cpu: &str, trend: &str, width: usize) -> (String, String) {
     let long = format!("{cpu} CPU");
     for (left, right) in [
@@ -415,7 +428,7 @@ fn usage_line(cpu: &str, trend: &str, width: usize) -> (String, String) {
         (long.as_str(), ""),
         (cpu, ""),
     ] {
-        let gap = usize::from(!right.is_empty());
+        let gap = if right.is_empty() { 0 } else { USAGE_GAP };
         if left.chars().count() + gap + right.chars().count() <= width {
             return (left.to_string(), right.to_string());
         }
