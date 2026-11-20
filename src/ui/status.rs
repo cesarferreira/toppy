@@ -53,6 +53,7 @@ fn shortcut_spans() -> Vec<Span<'static>> {
     shortcut(&mut spans, "P", "C", "M", "sort", theme::STATUS_KEY_SORT);
     shortcut(&mut spans, "/", "", "", "filter", theme::STATUS_KEY_FILTER);
     shortcut(&mut spans, "t", "", "", "tree", theme::STATUS_KEY_TREE);
+    shortcut(&mut spans, "m", "", "", "map", theme::TREEMAP_BORDER);
     shortcut(&mut spans, "k", "", "", "kill", theme::STATUS_KEY_KILL);
     shortcut(&mut spans, "r", "", "", "refresh", theme::STATUS_KEY_NAV);
     shortcut(&mut spans, "q", "", "", "quit", theme::STATUS_KEY_QUIT);

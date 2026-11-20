@@ -19,9 +19,9 @@ pub fn render_help(frame: &mut Frame, area: Rect) {
 
     let popup = Rect::new(
         area.x + area.width.saturating_sub(64) / 2,
-        area.y + area.height.saturating_sub(32) / 2,
+        area.y + area.height.saturating_sub(33) / 2,
         area.width.min(64),
-        area.height.min(32),
+        area.height.min(33),
     );
     frame.render_widget(Clear, popup);
 
@@ -49,6 +49,7 @@ pub fn render_help(frame: &mut Frame, area: Rect) {
         theme::STATUS_KEY_NAV,
     ));
     lines.push(row("t", "toggle tree view", theme::STATUS_KEY_TREE));
+    lines.push(row("m", "toggle treemap view", theme::TREEMAP_BORDER));
     lines.push(row("c", "toggle CPU per-core view", theme::CPU_BORDER));
     lines.push(row("i", "toggle disk and network IO", theme::IO_BORDER));
     lines.push(row("d", "toggle PID column", theme::STATUS_KEY_NAV));
@@ -101,7 +102,7 @@ pub fn render_help(frame: &mut Frame, area: Rect) {
         Span::styled(" to close", desc),
     ]));
 
-    if popup.height < 32 {
+    if popup.height < 33 {
         lines = vec![
             row("↑ ↓", "move selection", theme::STATUS_KEY_NAV),
             row("PgUp/Dn", "page up / down", theme::STATUS_KEY_NAV),
@@ -112,6 +113,7 @@ pub fn render_help(frame: &mut Frame, area: Rect) {
                 theme::STATUS_KEY_NAV,
             ),
             row("t", "toggle tree view", theme::STATUS_KEY_TREE),
+            row("m", "toggle treemap view", theme::TREEMAP_BORDER),
             row("→ ← Ret", "expand / collapse tree", theme::STATUS_KEY_TREE),
             row("c", "toggle CPU per-core view", theme::CPU_BORDER),
             row("i", "toggle disk and network IO", theme::IO_BORDER),

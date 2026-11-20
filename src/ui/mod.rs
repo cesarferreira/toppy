@@ -8,6 +8,7 @@ pub mod row;
 pub mod status;
 pub mod text;
 pub mod tree;
+pub mod treemap;
 pub mod widgets;
 
 use ratatui::Frame;
@@ -41,6 +42,12 @@ pub fn render(frame: &mut Frame, app: &mut App) {
     match app.mode {
         ViewMode::Tree => tree::render_tree(frame, root.main, app),
         ViewMode::Table => processes::render_processes(frame, root.main, app),
+        ViewMode::Treemap => {
+            app.treemap_tiles = treemap::render_treemap(frame, root.main, app);
+        }
+    }
+    if app.mode != ViewMode::Treemap {
+        app.treemap_tiles.clear();
     }
 
     status::render_status(frame, root.status, app);
@@ -202,6 +209,136 @@ mod tests {
         }
     }
 
+    #[test]
+    fn treemap_shows_tiles_colored_by_cpu_trend() {
+        let mut app = fixture();
+        // 20 rises, 30 falls, 10 stays the same.
+        app.previous_cpu = app
+            .processes
+            .iter()
+            .map(|p| {
+                let before = match p.pid {
+                    20 => 40.0,
+                    30 => 80.0,
+                    _ => p.cpu,
+                };
+                (p.identity(), before)
+            })
+            .collect();
+        app.toggle_treemap();
+        assert_eq!(app.mode, ViewMode::Treemap);
+        let mut terminal = Terminal::new(TestBackend::new(100, 30)).unwrap();
+        terminal.draw(|frame| render(frame, &mut app)).unwrap();
+        let text = screen(&terminal);
+        assert!(text.contains("Treemap"), "{text}");
+        assert!(text.contains("size: CPU"), "{text}");
+        for name in ["worker-20", "worker-30", "worker-10"] {
+            assert!(text.contains(name), "{name}: {text}");
+        }
+        assert!(text.contains("▲ +50.0"), "{text}");
+        assert!(text.contains("▼ -30.0"), "{text}");
+        assert!(text.contains("■ +0.0"), "{text}");
+        assert_eq!(app.treemap_tiles.len(), 3);
+
+        // Tile sizes follow CPU: 20 (90%) > 30 (50%) > 10 (10%).
+        let area = |pid: u32| {
+            let position = app
+                .filtered_indices
+                .iter()
+                .position(|&i| app.processes[i].pid == pid)
+                .unwrap();
+            app.treemap_tiles
+                .iter()
+                .find(|(p, _)| *p == position)
+                .unwrap()
+                .1
+                .area()
+        };
+        assert!(area(20) > area(30) && area(30) > area(10));
+
+        // Backgrounds: green for rising, red for falling, blue for steady.
+        let buffer = terminal.backend().buffer();
+        let bg_of = |label: &str| {
+            let width = buffer.area.width as usize;
+            let index = buffer
+                .content
+                .iter()
+                .enumerate()
+                .map(|(i, c)| (i, c.symbol()))
+                .collect::<Vec<_>>()
+                .windows(label.chars().count())
+                .position(|w| w.iter().map(|(_, s)| *s).collect::<String>() == label)
+                .unwrap();
+            let (x, y) = ((index % width) as u16, (index / width) as u16);
+            match buffer[(x, y)].bg {
+                Color::Rgb(r, g, b) => (r, g, b),
+                other => panic!("unexpected bg {other:?}"),
+            }
+        };
+        let (r, g, b) = bg_of("▲");
+        assert!(g > r && g > b, "rising tile should be green: {r},{g},{b}");
+        let (r, g, b) = bg_of("▼");
+        assert!(r > g && r > b, "falling tile should be red: {r},{g},{b}");
+        let (r, g, b) = bg_of("■");
+        assert!(b > r && b > g, "steady tile should be blue: {r},{g},{b}");
+    }
+
+    #[test]
+    fn treemap_arrows_move_between_tiles_and_m_returns_to_table() {
+        use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
+        let press = |app: &mut App, code| {
+            crate::input::handle_event(app, Event::Key(KeyEvent::new(code, KeyModifiers::NONE)));
+        };
+        let mut app = fixture();
+        press(&mut app, KeyCode::Char('m'));
+        let mut terminal = Terminal::new(TestBackend::new(100, 30)).unwrap();
+        terminal.draw(|frame| render(frame, &mut app)).unwrap();
+        assert_eq!(app.selected, 0);
+        let mut visited = std::collections::HashSet::from([app.selected]);
+        for code in [KeyCode::Right, KeyCode::Down, KeyCode::Left, KeyCode::Up] {
+            press(&mut app, code);
+            visited.insert(app.selected);
+        }
+        assert!(visited.len() > 1, "arrows never left the first tile");
+        press(&mut app, KeyCode::Char('m'));
+        assert_eq!(app.mode, ViewMode::Table);
+        terminal.draw(|frame| render(frame, &mut app)).unwrap();
+        assert!(app.treemap_tiles.is_empty());
+    }
+
+    #[test]
+    fn treemap_always_shows_the_selected_process() {
+        let mut app = fixture();
+        app.processes = (1..=400)
+            .map(|pid| crate::app::tests::row(pid, 1.0, None))
+            .collect();
+        app.processes[0].cpu = 95.0;
+        app.toggle_treemap();
+        app.move_end();
+        let last = app.selected;
+        let mut terminal = Terminal::new(TestBackend::new(80, 24)).unwrap();
+        terminal.draw(|frame| render(frame, &mut app)).unwrap();
+        assert!(app.treemap_tiles.len() < 400);
+        assert!(app.treemap_tiles.iter().any(|(p, _)| *p == last));
+        let text = screen(&terminal);
+        assert!(text.contains("▶"), "{text}");
+    }
+
+    #[test]
+    fn treemap_survives_tiny_terminals_and_empty_filters() {
+        let mut app = fixture();
+        app.toggle_treemap();
+        for (width, height) in [(1, 1), (10, 4), (20, 5), (80, 24)] {
+            let mut terminal = Terminal::new(TestBackend::new(width, height)).unwrap();
+            terminal.draw(|frame| render(frame, &mut app)).unwrap();
+        }
+        app.filter = "nothing-matches".into();
+        app.rebuild_view();
+        let mut terminal = Terminal::new(TestBackend::new(80, 24)).unwrap();
+        terminal.draw(|frame| render(frame, &mut app)).unwrap();
+        assert!(screen(&terminal).contains("no matching processes"));
+    }
+
     fn selected_process_panel(
         mode: ViewMode,
         width: u16,
@@ -228,6 +365,7 @@ mod tests {
             .draw(|frame| match mode {
                 ViewMode::Table => processes::render_processes(frame, panel, &app),
                 ViewMode::Tree => tree::render_tree(frame, panel, &app),
+                ViewMode::Treemap => unreachable!(),
             })
             .unwrap();
         let selected = Rect::new(
@@ -311,6 +449,7 @@ mod tests {
                     .draw(|frame| match mode {
                         ViewMode::Table => processes::render_processes(frame, frame.area(), &app),
                         ViewMode::Tree => tree::render_tree(frame, frame.area(), &app),
+                        ViewMode::Treemap => unreachable!(),
                     })
                     .unwrap();
                 let buffer = terminal.backend().buffer();

@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::time::{Duration, Instant};
 
 use sysinfo::Signal;
@@ -19,6 +19,7 @@ use crate::{
 pub enum ViewMode {
     Table,
     Tree,
+    Treemap,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -52,6 +53,10 @@ pub struct App {
     pub show_full_command: bool,
     pub show_io: bool,
     pub show_pid: bool,
+    /// CPU% of each process at the previous refresh, for treemap trends.
+    pub previous_cpu: HashMap<ProcessIdentity, f32>,
+    /// Treemap tiles from the last render: list position and screen area.
+    pub treemap_tiles: Vec<(usize, ratatui::layout::Rect)>,
     status_message: Option<String>,
     status_message_until: Option<Instant>,
     pub should_quit: bool,
@@ -89,6 +94,8 @@ impl App {
             show_full_command: settings.show_full_command,
             show_io: settings.show_io,
             show_pid: settings.show_pid,
+            previous_cpu: HashMap::new(),
+            treemap_tiles: Vec::new(),
             status_message: None,
             status_message_until: None,
             should_quit: false,
@@ -155,6 +162,11 @@ impl App {
                 .map(|process| process.pid)
                 .collect();
         }
+        self.previous_cpu = self
+            .processes
+            .iter()
+            .map(|process| (process.identity(), process.cpu))
+            .collect();
         self.cpu = snapshot.cpu;
         self.memory = snapshot.memory;
         self.io = snapshot.io;
@@ -366,6 +378,39 @@ impl App {
             self.tree = ProcessTree::build(&self.processes);
             self.rebuild_flat_tree();
         }
+    }
+
+    /// Switch between the treemap and the table view.
+    pub fn toggle_treemap(&mut self) {
+        if self.mode == ViewMode::Treemap {
+            self.mode = ViewMode::Table;
+            self.ensure_visible();
+        } else {
+            self.mode = ViewMode::Treemap;
+            self.flat_tree.clear();
+            if self.followed_process.is_none() {
+                self.selected = 0;
+                self.scroll_offset = 0;
+            }
+        }
+        self.rebuild_view();
+    }
+
+    /// CPU change since the previous refresh. New processes count as steady.
+    pub fn cpu_delta(&self, process: &ProcessRow) -> f32 {
+        self.previous_cpu
+            .get(&process.identity())
+            .map_or(0.0, |previous| process.cpu - previous)
+    }
+
+    /// Move the treemap selection to the nearest tile in a direction.
+    pub fn move_treemap(&mut self, dx: i32, dy: i32) {
+        let Some(next) = crate::ui::treemap::neighbor(&self.treemap_tiles, self.selected, dx, dy)
+        else {
+            return;
+        };
+        self.stop_following();
+        self.selected = next;
     }
 
     pub fn toggle_cpu_cores(&mut self) {

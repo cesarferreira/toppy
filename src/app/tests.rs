@@ -52,6 +52,8 @@ pub(crate) fn fixture() -> App {
         show_full_command: true,
         show_io: false,
         show_pid: true,
+        previous_cpu: HashMap::new(),
+        treemap_tiles: Vec::new(),
         status_message: None,
         status_message_until: None,
         should_quit: false,

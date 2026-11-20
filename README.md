@@ -174,6 +174,16 @@ Press `t` to switch the process panel to tree view. Expand and collapse branches
 
 Help, filtering, and the kill menu preserve the underlying tree view. Tree filtering shows matching processes and their ancestors, temporarily expanding those paths without changing saved expansion state.
 
+### Treemap
+
+Press lowercase `m` to switch the process panel to a treemap. Each process is a tile. Tile area follows CPU usage, or memory when you sort by memory (`M`). Tile color shows the CPU trend since the previous refresh:
+
+- **Green** (`▲`): CPU went up. Larger increases are brighter.
+- **Red** (`▼`): CPU went down. Larger decreases are brighter.
+- **Blue** (`■`): CPU changed by less than 1.5 percentage points.
+
+Each tile shows the program name, PID, memory, CPU%, and the change. Small tiles drop details that do not fit. Use the arrow keys to move to the nearest tile in that direction. The selected tile has an inverted title bar and always stays visible. Filter, follow, and kill work the same as in the table. Press `m` again to return to the table, or `t` for the tree.
+
 ### Kill and filter
 
 - `/` — live filter on command name or PID
@@ -203,6 +213,7 @@ Metrics continue refreshing while you navigate or use overlays; keyboard input d
 | `i` | Toggle disk and network IO |
 | `d` | Toggle PID column in process table and tree |
 | `t` | Toggle process tree view |
+| `m` | Toggle treemap view (arrows move between tiles) |
 | `→` / `←` / `Enter` | Expand/collapse tree node |
 | `k` / `F9` | Kill selected process |
 | `?` / `F1` | Help overlay |

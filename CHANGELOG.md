@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Added
+- Add treemap view (`m`) with tiles sized by CPU or memory and colored by CPU trend
+
 ## [0.7.0] - 2026-11-17
 
 ### Added

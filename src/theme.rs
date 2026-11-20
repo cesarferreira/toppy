@@ -9,6 +9,15 @@ pub const IO_RX: Color = Color::Rgb(120, 230, 170);
 pub const IO_TX: Color = Color::Rgb(190, 150, 255);
 pub const PROC_BORDER: Color = Color::White;
 pub const TREE_BORDER: Color = Color::Green;
+pub const TREEMAP_BORDER: Color = Color::Rgb(255, 170, 90);
+pub const TREEMAP_META: Color = Color::Rgb(215, 222, 235);
+const TREEMAP_FLAT: (u8, u8, u8) = (30, 58, 92);
+const TREEMAP_DOWN: (u8, u8, u8) = (108, 38, 44);
+const TREEMAP_DOWN_STRONG: (u8, u8, u8) = (178, 48, 58);
+const TREEMAP_UP: (u8, u8, u8) = (38, 104, 58);
+const TREEMAP_UP_STRONG: (u8, u8, u8) = (88, 196, 96);
+/// CPU change, in percentage points, that reaches the strongest tile color.
+const TREEMAP_STRONG_DELTA: f32 = 20.0;
 pub const STATUS_FG: Color = Color::DarkGray;
 pub const HEADER_FG: Color = Color::Yellow;
 pub const SELECTED_BG: Color = Color::Rgb(32, 56, 88);
@@ -72,6 +81,26 @@ fn lerp(a: (u8, u8, u8), b: (u8, u8, u8), t: f32) -> Color {
     let t = t.clamp(0.0, 1.0);
     let mix = |x: u8, y: u8| (x as f32 + (y as f32 - x as f32) * t).round() as u8;
     Color::Rgb(mix(a.0, b.0), mix(a.1, b.1), mix(a.2, b.2))
+}
+
+/// Treemap tile background: blue when steady, red when CPU falls, green when
+/// it rises. Bigger changes give brighter colors.
+pub fn treemap_tile_bg(cpu_delta: f32) -> Color {
+    let strength = (cpu_delta.abs() / TREEMAP_STRONG_DELTA).clamp(0.0, 1.0);
+    let base = if cpu_delta >= crate::ui::treemap::TREND_DEADBAND {
+        mix(TREEMAP_UP, TREEMAP_UP_STRONG, strength)
+    } else if cpu_delta <= -crate::ui::treemap::TREND_DEADBAND {
+        mix(TREEMAP_DOWN, TREEMAP_DOWN_STRONG, strength)
+    } else {
+        TREEMAP_FLAT
+    };
+    Color::Rgb(base.0, base.1, base.2)
+}
+
+fn mix(a: (u8, u8, u8), b: (u8, u8, u8), t: f32) -> (u8, u8, u8) {
+    let t = t.clamp(0.0, 1.0);
+    let channel = |x: u8, y: u8| (x as f32 + (y as f32 - x as f32) * t).round() as u8;
+    (channel(a.0, b.0), channel(a.1, b.1), channel(a.2, b.2))
 }
 
 pub fn utilization_color(pct: f32) -> Color {
